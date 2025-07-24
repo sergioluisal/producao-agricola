@@ -294,8 +294,153 @@ if not filtered_df.empty:
 
 else:
     st.info("ℹ️ Ajuste os filtros para ver as visualizações.")
+# Resultado da melhor colheita com base nos filtros
+st.header("🏆 Melhor Resultado de Produtividade")
 
+if not filtered_df.empty:
+    best_row = filtered_df.loc[filtered_df["Yield_tons_per_hectare"].idxmax()]
+
+    st.markdown(f"""
+    <style>
+    .best-result {{
+        background-color: var(--background-color-secondary);
+        color: var(--text-color);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 6px solid var(--primary-color);
+        margin-top: 1rem;
+        font-size: 1.05rem;
+    }}
+    .best-result h3 {{
+        color: var(--primary-color);
+    }}
+   </style>
+
+   <div class="best-result">
+    <h3>🌟 A melhor colheita registrada com os filtros atuais foi:</h3>
+    <ul>
+        <li><strong>Região:</strong> {best_row['Region']}</li>
+        <li><strong>Cultura:</strong> {best_row['Crop']}</li>
+        <li><strong>Tipo de Solo:</strong> {best_row['Soil_Type']}</li>
+        <li><strong>Condição Climática:</strong> {best_row['Weather_Condition']}</li>
+        <li><strong>Uso de Fertilizante:</strong> {"Sim" if best_row["Fertilizer_Used"] else "Não"}</li>
+        <li><strong>Uso de Irrigação:</strong> {"Sim" if best_row["Irrigation_Used"] else "Não"}</li>
+        <li><strong>Chuva:</strong> {best_row["Rainfall_mm"]:.2f} mm</li>
+        <li><strong>Temperatura:</strong> {best_row["Temperature_Celsius"]:.2f} °C</li>
+        <li><strong>🌾 Produtividade:</strong> <strong>{best_row["Yield_tons_per_hectare"]:.2f} ton/ha</strong></li>
+    </ul>
+   </div>
+  """, unsafe_allow_html=True)
+else:
+    st.info("ℹ️ Nenhuma colheita disponível com os filtros atuais.")
+    
+# Ranking das 3 melhores colheitas com base nos filtros
+st.header("🥇 Top 3 Colheitas com Maior Produtividade")
+
+if not filtered_df.empty:
+    top_3 = filtered_df.sort_values("Yield_tons_per_hectare", ascending=False).head(3).copy()
+    top_3["Fertilizer_Used"] = top_3["Fertilizer_Used"].map({True: "Sim", False: "Não"})
+    top_3["Irrigation_Used"] = top_3["Irrigation_Used"].map({True: "Sim", False: "Não"})
+
+    top_3_display = top_3[[
+        "Region", "Crop", "Soil_Type", "Weather_Condition",
+        "Fertilizer_Used", "Irrigation_Used",
+        "Rainfall_mm", "Temperature_Celsius", "Yield_tons_per_hectare"
+    ]].rename(columns={
+        "Region": "Região",
+        "Crop": "Cultura",
+        "Soil_Type": "Tipo de Solo",
+        "Weather_Condition": "Condição Climática",
+        "Fertilizer_Used": "Fertilizante",
+        "Irrigation_Used": "Irrigação",
+        "Rainfall_mm": "Chuva (mm)",
+        "Temperature_Celsius": "Temperatura (°C)",
+        "Yield_tons_per_hectare": "Produtividade (ton/ha)"
+    })
+
+    st.table(top_3_display.style.format({
+        "Chuva (mm)": "{:.2f}",
+        "Temperatura (°C)": "{:.2f}",
+        "Produtividade (ton/ha)": "{:.2f}"
+    }))
+else:
+    st.info("ℹ️ Nenhuma colheita disponível para exibir ranking com os filtros atuais.")
+    
 st.markdown("---")
+# ----------------------------
+# 🤖 Machine Learning: KNN + Métricas
+# ----------------------------
+
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
+st.header("🤖 Previsão de Produtividade com KNN")
+
+# Verifica se as colunas necessárias estão presentes
+knn_required = ["Rainfall_mm", "Temperature_Celsius", "Soil_Type", "Crop", "Yield_tons_per_hectare"]
+missing_knn_cols = [col for col in knn_required if col not in filtered_df.columns]
+
+if missing_knn_cols:
+    st.warning(f"Colunas faltando para análise de Machine Learning: {', '.join(missing_knn_cols)}")
+else:
+    df_ml = filtered_df[knn_required].dropna().copy()
+
+    if df_ml.empty:
+        st.warning("⚠️ Dados insuficientes para treinamento do modelo.")
+    else:
+        # Encoding de variáveis categóricas
+        label_encoder_soil = LabelEncoder()
+        label_encoder_crop = LabelEncoder()
+        df_ml["Soil_Type"] = label_encoder_soil.fit_transform(df_ml["Soil_Type"])
+        df_ml["Crop"] = label_encoder_crop.fit_transform(df_ml["Crop"])
+
+        # Variáveis independentes e alvo
+        X = df_ml.drop("Yield_tons_per_hectare", axis=1)
+        y = df_ml["Yield_tons_per_hectare"]
+
+        # Treino/teste
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Treinamento do modelo
+        knn = KNeighborsRegressor(n_neighbors=5)
+        knn.fit(X_train, y_train)
+        y_pred = knn.predict(X_test)
+
+        # Cálculo das métricas
+        r2 = r2_score(y_test, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        mae = mean_absolute_error(y_test, y_pred)
+
+        # Exibição no dashboard
+        col1, col2, col3 = st.columns(3)
+        col1.metric("📈 R²", f"{r2:.2f}")
+        col2.metric("📉 RMSE", f"{rmse:.2f} ton/ha")
+        col3.metric("📏 MAE", f"{mae:.2f} ton/ha")
+
+        # Comparação gráfica real vs previsto
+        st.subheader("🔍 Comparação: Real vs Previsto (KNN)")
+        comparison_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred})
+        fig_pred = px.scatter(
+            comparison_df,
+            x="Real",
+            y="Previsto",
+            title="Produtividade: Valores Reais vs. Previsto pelo KNN",
+            labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Prevista (ton/ha)"},
+            color_discrete_sequence=["#2E7D32"]
+        )
+        fig_pred.add_trace(
+            go.Scatter(
+                x=[y_test.min(), y_test.max()],
+                y=[y_test.min(), y_test.max()],
+                mode='lines',
+                name='Ideal',
+                line=dict(dash='dash', color='red')
+            )
+        )
+        st.plotly_chart(fig_pred, use_container_width=True)
+
 st.markdown(
     """
     <div style='text-align: center; color: #666;'>
@@ -304,3 +449,4 @@ st.markdown(
     """, 
     unsafe_allow_html=True
 )
+
