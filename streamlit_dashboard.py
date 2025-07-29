@@ -523,7 +523,7 @@ autolabel(bars_mae)
 ax.set_xticks(x)
 ax.set_xticklabels(modelos, fontsize=12)
 ax.set_ylabel("Valor", fontsize=12)
-ax.set_title("📊 Comparativo de Desempenho: KNN vs Random Forest", fontsize=14, fontweight='bold')
+#ax.set_title("📊 Comparativo de Desempenho: KNN vs Random Forest", fontsize=14, fontweight='bold')
 ax.legend()
 
 st.pyplot(fig)
