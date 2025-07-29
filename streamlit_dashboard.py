@@ -527,7 +527,7 @@ autolabel(bars_rf)
 ax.set_yticks(y)
 ax.set_yticklabels(metricas, fontsize=12, color='white')
 ax.set_xlabel("Valor da Métrica", fontsize=12, color='white')
-ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=14, fontweight='bold', color='white')
+#ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=14, fontweight='bold', color='white')
 
 # Tira linhas do gráfico
 ax.tick_params(axis='x', colors='white')
