@@ -490,9 +490,9 @@ import seaborn as sns
 
 st.subheader("📊 Comparativo Horizontal entre Modelos")
 
-# Estilo escuro elegante
+# Estilo escuro premium
 plt.style.use('dark_background')
-sns.set_context("notebook", font_scale=1.2)
+sns.set_context("talk", font_scale=1.1)
 
 # Dados
 metricas = ['📈 R²', '📉 RMSE', '📏 MAE']
@@ -503,34 +503,33 @@ y = np.arange(len(metricas))
 height = 0.35
 
 # Figura menor com fundo transparente
-fig, ax = plt.subplots(figsize=(8, 4.5), facecolor='none')
+fig, ax = plt.subplots(figsize=(7, 4), facecolor='none')
 fig.patch.set_alpha(0)
 ax.set_facecolor('none')
 
-# Barras
-bars_knn = ax.barh(y - height/2, knn_scores, height, label='KNN', color='#00C853')
+# Barras com estilo limpo
+bars_knn = ax.barh(y - height/2, knn_scores, height, label='KNN', color='#00E676')
 bars_rf = ax.barh(y + height/2, rf_scores, height, label='Random Forest', color='#2979FF')
 
-# Labels nas barras
+# Labels com tipografia moderna
 def autolabel(bars):
     for bar in bars:
         width = bar.get_width()
         ax.annotate(f'{width:.2f}',
-                    xy=(width, bar.get_y() + bar.get_height() / 2),
-                    xytext=(5, 0), textcoords="offset points",
+                    xy=(width + 0.02, bar.get_y() + bar.get_height() / 2),
                     ha='left', va='center',
-                    fontsize=10, fontweight='bold', color='white', family='DejaVu Sans')
+                    fontsize=10, color='white', fontweight='bold')
 
 autolabel(bars_knn)
 autolabel(bars_rf)
 
-# Layout e estilo textual moderno
+# Eixos
 ax.set_yticks(y)
-ax.set_yticklabels(metricas, fontsize=12, fontweight='bold', color='white', family='DejaVu Sans')
-ax.set_xlabel("Valor da Métrica", fontsize=12, fontweight='bold', color='white', family='DejaVu Sans')
-ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=14, fontweight='bold', color='white', family='DejaVu Sans')
+ax.set_yticklabels(metricas, fontsize=11, fontweight='bold', color='white')
+ax.set_xlabel("Valor da Métrica", fontsize=11, fontweight='bold', color='white')
+ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=13, fontweight='bold', color='white')
 
-# Tira linhas e bordas
+# Remove linhas, ticks e bordas
 ax.tick_params(axis='x', colors='white')
 ax.tick_params(axis='y', colors='white')
 ax.grid(False)
@@ -538,12 +537,11 @@ ax.grid(False)
 for spine in ax.spines.values():
     spine.set_visible(False)
 
-# Legenda estilizada
-legend = ax.legend(frameon=True, facecolor='#1e1e1e', edgecolor='white')
+# Legenda elegante
+legend = ax.legend(loc='lower right', frameon=False)
 for text in legend.get_texts():
     text.set_color("white")
     text.set_fontweight("bold")
-    text.set_fontfamily("DejaVu Sans")
 
 # Exibir no Streamlit
 st.pyplot(fig)
