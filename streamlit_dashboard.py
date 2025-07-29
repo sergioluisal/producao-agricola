@@ -300,7 +300,7 @@ if not filtered_df.empty:
         st.plotly_chart(fig_scatter, use_container_width=True)
         
     st.subheader("📊 Distribuição de Produtividade")
-     fig_hist = px.histogram(
+       fig_hist = px.histogram(
         filtered_df, 
         x="Yield_tons_per_hectare",
         nbins=30,
@@ -308,7 +308,7 @@ if not filtered_df.empty:
         labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "count": "Frequência"},
         color_discrete_sequence=["#4CAF50"]
      )
-     fig_hist.update_layout(
+       fig_hist.update_layout(
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
