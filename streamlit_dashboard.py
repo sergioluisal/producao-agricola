@@ -440,6 +440,68 @@ else:
             )
         )
         st.plotly_chart(fig_pred, use_container_width=True)
+        # Treinamento com Random Forest
+from sklearn.ensemble import RandomForestRegressor
+
+rf = RandomForestRegressor(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+y_pred_rf = rf.predict(X_test)
+
+# Cálculo das métricas
+r2_rf = r2_score(y_test, y_pred_rf)
+rmse_rf = np.sqrt(mean_squared_error(y_test, y_pred_rf))
+mae_rf = mean_absolute_error(y_test, y_pred_rf)
+
+st.subheader("🌲 Resultados com Random Forest")
+col4, col5, col6 = st.columns(3)
+col4.metric("📈 R²", f"{r2_rf:.2f}")
+col5.metric("📉 RMSE", f"{rmse_rf:.2f} ton/ha")
+col6.metric("📏 MAE", f"{mae_rf:.2f} ton/ha")
+
+# Gráfico real vs previsto - Random Forest
+comparison_rf_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred_rf})
+fig_rf = px.scatter(
+    comparison_rf_df,
+    x="Real",
+    y="Previsto",
+    title="Produtividade: Real vs Previsto (Random Forest)",
+    labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Prevista (ton/ha)"},
+    color_discrete_sequence=["#1565C0"]
+)
+fig_rf.add_trace(
+    go.Scatter(
+        x=[y_test.min(), y_test.max()],
+        y=[y_test.min(), y_test.max()],
+        mode='lines',
+        name='Ideal',
+        line=dict(dash='dash', color='red')
+    )
+)
+st.plotly_chart(fig_rf, use_container_width=True)
+
+# Comparação KNN vs RF - gráfico de barras
+st.subheader("📊 Comparação entre Modelos: KNN vs Random Forest")
+import matplotlib.pyplot as plt
+import numpy as np
+
+modelos = ['KNN', 'Random Forest']
+r2_scores = [r2, r2_rf]
+rmse_scores = [rmse, rmse_rf]
+mae_scores = [mae, mae_rf]
+
+x = np.arange(len(modelos))
+width = 0.25
+
+fig_comp, ax = plt.subplots(figsize=(8, 5))
+ax.bar(x - width, r2_scores, width, label='R²', color='green')
+ax.bar(x, rmse_scores, width, label='RMSE', color='orange')
+ax.bar(x + width, mae_scores, width, label='MAE', color='blue')
+
+ax.set_xticks(x)
+ax.set_xticklabels(modelos)
+ax.set_title("Desempenho dos Modelos")
+ax.legend()
+st.pyplot(fig_comp)
 
 st.markdown(
     """
