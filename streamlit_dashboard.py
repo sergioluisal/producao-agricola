@@ -581,7 +581,7 @@ fig.update_layout(
     ]
 )
 
-    return fig
+return fig
 
 def create_dashboard_comparison_transparent(metrics, y_test):
     """Cria dashboard completo com múltiplos gráficos com fundo transparente"""
