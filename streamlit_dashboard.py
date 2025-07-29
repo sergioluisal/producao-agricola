@@ -298,53 +298,39 @@ if not filtered_df.empty:
             paper_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
-        import streamlit as st
-        import plotly.graph_objects as go
-        import numpy as np
-        from scipy.stats import gaussian_kde
+        st.subheader("📊 Distribuição de Produtividade")
+    fig_hist = px.histogram(
+        filtered_df, 
+        x="Yield_tons_per_hectare",
+        nbins=30,
+        title="Distribuição da Produtividade",
+        labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "count": "Frequência"},
+        color_discrete_sequence=["#4CAF50"]
+    )
 
-       # Dados: remover valores ausentes
-       x = filtered_df["Yield_tons_per_hectare"].dropna()
+       # Calcular curva KDE (distribuição suavizada)
+       kde = gaussian_kde(x)
+       x_range = np.linspace(x.min(), x.max(), 1000)
+       y_kde = kde(x_range) * len(x) * (x.max() - x.min()) / 100  # Escala para coincidir com histograma
 
-       # Criar histograma com barras finas
-          hist = go.Histogram(
-            x=x,
-            nbinsx=100,  # Barras estreitas para melhor suavização visual
-            marker_color='steelblue',
-            opacity=0.6,
-            name='Histograma',
-            histnorm='count'
-       )
+       # Criar linha KDE
+       kde_line = go.Scatter(
+          x=x_range,
+          y=y_kde,
+          mode='lines',
+          line=dict(color='black', width=2),
+          name='KDE'
+     )
 
-        # Calcular curva KDE (distribuição suavizada)
-        kde = gaussian_kde(x)
-        x_range = np.linspace(x.min(), x.max(), 1000)
-           y_kde = kde(x_range) * len(x) * (x.max() - x.min()) / 100  # Escala para coincidir com histograma
-
-            # Criar linha KDE
-            kde_line = go.Scatter(
-            x=x_range,
-            y=y_kde,
-            mode='lines',
-            line=dict(color='black', width=2),
-            name='KDE'
-       )
-
-        # Montar figura com histograma + linha KDE
-        fig = go.Figure(data=[hist, kde_line])
-
-       # Personalizar layout da figura
-       fig.update_layout(
-          title="Distribuição da Produtividade",
-          xaxis_title="Produtividade (ton/ha)",
-          yaxis_title="Frequência",
-          plot_bgcolor="white",
-          paper_bgcolor="white",
-         showlegend=False
-       )
-
-       # Exibir no Streamlit
-        st.plotly_chart(fig, use_container_width=True)
+       # Montar figura com histograma + linha KDE
+       fig = go.Figure(data=[hist, kde_line])
+    
+       fig_hist.update_layout(
+           showlegend=False,
+           plot_bgcolor='rgba(0,0,0,0)',
+           paper_bgcolor='rgba(0,0,0,0)'
+     )
+      st.plotly_chart(fig_hist, use_container_width=True)  
 
     with st.expander("📋 Ver Dados Filtrados"):
         st.dataframe(filtered_df, use_container_width=True)
