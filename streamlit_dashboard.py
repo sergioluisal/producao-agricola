@@ -508,78 +508,78 @@ def create_interactive_comparison_chart_transparent(metrics):
     ))
 
     # Layout principal do gráfico
-    fig.update_layout(
-        title={
-            'text': '🤖 Comparação Interativa: KNN vs Random Forest<br>' +
-                    '<sub>Análise de Desempenho para Predição de Produtividade Agrícola</sub>',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 20, 'color': '#FFFFFF'}  # Ajuste conforme tema
-        },
-        xaxis_title='Modelos de Machine Learning',
-        yaxis_title='Valores das Métricas',
-        barmode='group',
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="center",
-            x=0.5,
-            font=dict(size=12)
+fig.update_layout(
+    title={
+        'text': '🤖 Comparação Interativa: KNN vs Random Forest<br>' +
+                '<sub>Análise de Desempenho para Predição de Produtividade Agrícola</sub>',
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {'size': 20, 'color': '#FFFFFF'}
+    },
+    xaxis_title='Modelos de Machine Learning',
+    yaxis_title='Valores das Métricas',
+    barmode='group',
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.05,  # empurrando a legenda para cima do gráfico
+        xanchor="center",
+        x=0.5,
+        font=dict(size=12)
+    ),
+    height=700,
+    annotations=annotations,
+    **get_plotly_style_transparent()
+)
+
+# Mover explicação das métricas mais para baixo e fora do título
+fig.add_annotation(
+    text="📘 <b>R²</b>: Coef. Determinação &nbsp;&nbsp;&nbsp; 🔵 <b>RMSE</b>: Erro Quadrático Médio &nbsp;&nbsp;&nbsp; 🟢 <b>MAE</b>: Erro Absoluto Médio",
+    xref="paper", yref="paper",
+    x=0, y=0.98,  # antes era y=1.12 — agora abaixo do título
+    showarrow=False,
+    align="left",
+    font=dict(size=12, color="white"),
+    bgcolor="rgba(0,0,0,0)"
+)
+
+# Botões para alternar visibilidade das métricas
+fig.update_layout(
+    updatemenus=[
+        dict(
+            type="buttons",
+            direction="left",
+            buttons=[
+                dict(
+                    args=[{"visible": [True, True, True]}],
+                    label="Todas as Métricas",
+                    method="restyle"
+                ),
+                dict(
+                    args=[{"visible": [True, False, False]}],
+                    label="Apenas R²",
+                    method="restyle"
+                ),
+                dict(
+                    args=[{"visible": [False, True, False]}],
+                    label="Apenas RMSE",
+                    method="restyle"
+                ),
+                dict(
+                    args=[{"visible": [False, False, True]}],
+                    label="Apenas MAE",
+                    method="restyle"
+                ),
+            ],
+            pad={"r": 10, "t": 10},
+            showactive=True,
+            x=0.01,
+            xanchor="left",
+            y=0.93,  # antes era 1.08 — agora deslocado para não colidir com título
+            yanchor="top"
         ),
-        height=650,
-        annotations=annotations,
-        **get_plotly_style_transparent()
-    )
-
-    # Anotação explicando as métricas
-    fig.add_annotation(
-        text="📘 <b>R²</b>: Coef. Determinação &nbsp;&nbsp;&nbsp; 🔵 <b>RMSE</b>: Erro Quadrático Médio &nbsp;&nbsp;&nbsp; 🟢 <b>MAE</b>: Erro Absoluto Médio",
-        xref="paper", yref="paper",
-        x=0, y=1.12,
-        showarrow=False,
-        align="left",
-        font=dict(size=12, color="white"),
-        bgcolor="rgba(0,0,0,0)"
-    )
-
-    # Botões para alternar visibilidade das métricas
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                type="buttons",
-                direction="left",
-                buttons=[
-                    dict(
-                        args=[{"visible": [True, True, True]}],
-                        label="Todas as Métricas",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [True, False, False]}],
-                        label="Apenas R²",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [False, True, False]}],
-                        label="Apenas RMSE",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [False, False, True]}],
-                        label="Apenas MAE",
-                        method="restyle"
-                    ),
-                ],
-                pad={"r": 10, "t": 10},
-                showactive=True,
-                x=0.01,
-                xanchor="left",
-                y=1.08,
-                yanchor="top"
-            ),
-        ]
-    )
+    ]
+)
 
     return fig
 
