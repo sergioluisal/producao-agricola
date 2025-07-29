@@ -502,10 +502,14 @@ rf_scores = [r2_rf, rmse_rf, mae_rf]
 y = np.arange(len(metricas))
 height = 0.35
 
-fig, ax = plt.subplots(figsize=(10, 6))
+# Criação da figura com fundo transparente
+fig, ax = plt.subplots(figsize=(10, 6), facecolor='none')
+fig.patch.set_alpha(0)
+ax.set_facecolor('none')
 
-bars_knn = ax.barh(y - height/2, knn_scores, height, label='KNN', color='#00C853', edgecolor='white')
-bars_rf = ax.barh(y + height/2, rf_scores, height, label='Random Forest', color='#2979FF', edgecolor='white')
+# Barras sem bordas (edgecolor removido para visual mais limpo)
+bars_knn = ax.barh(y - height/2, knn_scores, height, label='KNN', color='#00C853')
+bars_rf = ax.barh(y + height/2, rf_scores, height, label='Random Forest', color='#2979FF')
 
 # Labels nas barras
 def autolabel(bars):
@@ -526,16 +530,17 @@ ax.set_xlabel("Valor da Métrica", fontsize=12, color='white')
 ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=14, fontweight='bold', color='white')
 
 ax.tick_params(axis='x', colors='white')
-ax.spines['top'].set_visible(False)
-ax.spines['right'].set_visible(False)
-ax.spines['left'].set_color('white')
-ax.spines['bottom'].set_color('white')
+
+# Removendo bordas visuais
+for spine in ax.spines.values():
+    spine.set_visible(False)
 
 # Legenda estilizada
 legend = ax.legend(frameon=True, facecolor='#1e1e1e', edgecolor='white')
 for text in legend.get_texts():
     text.set_color("white")
 
+# Renderiza no Streamlit
 st.pyplot(fig)
 
 st.markdown(
