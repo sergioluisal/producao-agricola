@@ -488,54 +488,51 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-st.subheader("📊 Comparativo de Desempenho: KNN vs Random Forest")
+st.subheader("📊 Comparativo Horizontal entre Modelos")
 
-# Ativar estilo escuro e grid elegante
+# Estilo escuro elegante
 plt.style.use('dark_background')
-sns.set_context("notebook", font_scale=1.1)
+sns.set_context("notebook", font_scale=1.2)
 
 # Dados
-modelos = ['KNN', 'Random Forest']
-r2_scores = [r2, r2_rf]
-rmse_scores = [rmse, rmse_rf]
-mae_scores = [mae, mae_rf]
+metricas = ['📈 R²', '📉 RMSE', '📏 MAE']
+knn_scores = [r2, rmse, mae]
+rf_scores = [r2_rf, rmse_rf, mae_rf]
 
-x = np.arange(len(modelos))
-width = 0.25
+y = np.arange(len(metricas))
+height = 0.35
 
 fig, ax = plt.subplots(figsize=(10, 6))
 
-# Barras com cores modernas e bordas
-bars_r2 = ax.bar(x - width, r2_scores, width, label='R²', color='#00C853', edgecolor='white')
-bars_rmse = ax.bar(x, rmse_scores, width, label='RMSE', color='#FFA000', edgecolor='white')
-bars_mae = ax.bar(x + width, mae_scores, width, label='MAE', color='#2979FF', edgecolor='white')
+bars_knn = ax.barh(y - height/2, knn_scores, height, label='KNN', color='#00C853', edgecolor='white')
+bars_rf = ax.barh(y + height/2, rf_scores, height, label='Random Forest', color='#2979FF', edgecolor='white')
 
-# Adicionar valores nas barras
+# Labels nas barras
 def autolabel(bars):
     for bar in bars:
-        height = bar.get_height()
-        ax.annotate(f'{height:.2f}',
-                    xy=(bar.get_x() + bar.get_width() / 2, height),
-                    xytext=(0, 6),
-                    textcoords="offset points",
-                    ha='center', va='bottom',
-                    fontsize=10, color='white')
+        width = bar.get_width()
+        ax.annotate(f'{width:.2f}',
+                    xy=(width, bar.get_y() + bar.get_height() / 2),
+                    xytext=(5, 0), textcoords="offset points",
+                    ha='left', va='center', fontsize=10, color='white')
 
-autolabel(bars_r2)
-autolabel(bars_rmse)
-autolabel(bars_mae)
+autolabel(bars_knn)
+autolabel(bars_rf)
 
-# Ajustes de layout
-ax.set_xticks(x)
-ax.set_xticklabels(modelos, fontsize=12, color='white')
-ax.set_ylabel("Valor", fontsize=12, color='white')
-ax.set_title("📊 Comparativo de Desempenho dos Modelos", fontsize=14, fontweight='bold', color='white')
-ax.tick_params(axis='y', colors='white')
-ax.spines['bottom'].set_color('white')
+# Layout e estilo
+ax.set_yticks(y)
+ax.set_yticklabels(metricas, fontsize=12, color='white')
+ax.set_xlabel("Valor da Métrica", fontsize=12, color='white')
+ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=14, fontweight='bold', color='white')
+
+ax.tick_params(axis='x', colors='white')
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
 ax.spines['left'].set_color('white')
+ax.spines['bottom'].set_color('white')
 
-# Legenda customizada
-legend = ax.legend(frameon=True, facecolor='#1e1e1e', edgecolor='white', labelcolor='white')
+# Legenda estilizada
+legend = ax.legend(frameon=True, facecolor='#1e1e1e', edgecolor='white')
 for text in legend.get_texts():
     text.set_color("white")
 
