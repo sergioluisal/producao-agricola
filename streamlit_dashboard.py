@@ -575,7 +575,7 @@ def create_interactive_comparison_chart_transparent(metrics):
                 showactive=True,
                 x=0.01,
                 xanchor="left",
-                y=0.93,
+                y=0.90,
                 yanchor="top"
             ),
         ]
@@ -673,7 +673,7 @@ def create_dashboard_comparison_transparent(metrics, y_test):
             'text': '📊 Dashboard Completo: Análise KNN vs Random Forest',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 18, 'color': '#333333'}
+            'font': {'size': 18, 'color': '#FFFFFF'}
         },
         height=800,
         **get_plotly_style_transparent()
