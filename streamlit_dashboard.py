@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+from plotly.subplots import make_subplots
 
 # Configuração da página
 st.set_page_config(
@@ -96,6 +97,19 @@ st.markdown("""
     }
     .filter-header {
         color: #1976D2;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+    .ml-section {
+        background-color: #f8f9fa;
+        padding: 2rem;
+        border-radius: 10px;
+        border-left: 6px solid #4080FF;
+        margin: 2rem 0;
+    }
+    .comparison-header {
+        color: #4080FF;
+        font-size: 1.5rem;
         font-weight: bold;
         margin-bottom: 1rem;
     }
@@ -294,6 +308,7 @@ if not filtered_df.empty:
 
 else:
     st.info("ℹ️ Ajuste os filtros para ver as visualizações.")
+
 # Resultado da melhor colheita com base nos filtros
 st.header("🏆 Melhor Resultado de Produtividade")
 
@@ -365,224 +380,15 @@ if not filtered_df.empty:
     }))
 else:
     st.info("ℹ️ Nenhuma colheita disponível para exibir ranking com os filtros atuais.")
-    
+
 st.markdown("---")
-# ----------------------------
-# 🤖 Machine Learning: KNN + Métricas
-# ----------------------------
-
-from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-
-st.header("🤖 Previsão de Produtividade com KNN")
-
-# Verifica se as colunas necessárias estão presentes
-knn_required = ["Rainfall_mm", "Temperature_Celsius", "Soil_Type", "Crop", "Yield_tons_per_hectare"]
-missing_knn_cols = [col for col in knn_required if col not in filtered_df.columns]
-
-if missing_knn_cols:
-    st.warning(f"Colunas faltando para análise de Machine Learning: {', '.join(missing_knn_cols)}")
-else:
-    df_ml = filtered_df[knn_required].dropna().copy()
-
-    if df_ml.empty:
-        st.warning("⚠️ Dados insuficientes para treinamento do modelo.")
-    else:
-        # Encoding de variáveis categóricas
-        label_encoder_soil = LabelEncoder()
-        label_encoder_crop = LabelEncoder()
-        df_ml["Soil_Type"] = label_encoder_soil.fit_transform(df_ml["Soil_Type"])
-        df_ml["Crop"] = label_encoder_crop.fit_transform(df_ml["Crop"])
-
-        # Variáveis independentes e alvo
-        X = df_ml.drop("Yield_tons_per_hectare", axis=1)
-        y = df_ml["Yield_tons_per_hectare"]
-
-        # Treino/teste
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Treinamento do modelo
-        knn = KNeighborsRegressor(n_neighbors=5)
-        knn.fit(X_train, y_train)
-        y_pred = knn.predict(X_test)
-
-        # Cálculo das métricas
-        r2 = r2_score(y_test, y_pred)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        mae = mean_absolute_error(y_test, y_pred)
-
-        # Exibição no dashboard
-        col1, col2, col3 = st.columns(3)
-        col1.metric("📈 R²", f"{r2:.2f}")
-        col2.metric("📉 RMSE", f"{rmse:.2f} ton/ha")
-        col3.metric("📏 MAE", f"{mae:.2f} ton/ha")
-
-        # Comparação gráfica real vs previsto
-        st.subheader("🔍 Comparação: Real vs Previsto (KNN)")
-        comparison_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred})
-        fig_pred = px.scatter(
-            comparison_df,
-            x="Real",
-            y="Previsto",
-            title="Produtividade: Valores Reais vs. Previsto pelo KNN",
-            labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Prevista (ton/ha)"},
-            color_discrete_sequence=["#2E7D32"]
-        )
-        fig_pred.add_trace(
-            go.Scatter(
-                x=[y_test.min(), y_test.max()],
-                y=[y_test.min(), y_test.max()],
-                mode='lines',
-                name='Ideal',
-                line=dict(dash='dash', color='red')
-            )
-        )
-        st.plotly_chart(fig_pred, use_container_width=True)
-        
-# Treinamento com Random Forest
-from sklearn.ensemble import RandomForestRegressor
-
-rf = RandomForestRegressor(n_estimators=100, random_state=42)
-rf.fit(X_train, y_train)
-y_pred_rf = rf.predict(X_test)
-
-# Cálculo das métricas
-r2_rf = r2_score(y_test, y_pred_rf)
-rmse_rf = np.sqrt(mean_squared_error(y_test, y_pred_rf))
-mae_rf = mean_absolute_error(y_test, y_pred_rf)
-
-st.subheader("🌲 Resultados com Random Forest")
-col4, col5, col6 = st.columns(3)
-col4.metric("📈 R²", f"{r2_rf:.2f}")
-col5.metric("📉 RMSE", f"{rmse_rf:.2f} ton/ha")
-col6.metric("📏 MAE", f"{mae_rf:.2f} ton/ha")
-
-# Gráfico real vs previsto - Random Forest
-comparison_rf_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred_rf})
-fig_rf = px.scatter(
-    comparison_rf_df,
-    x="Real",
-    y="Previsto",
-    title="Produtividade: Real vs Previsto (Random Forest)",
-    labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Prevista (ton/ha)"},
-    color_discrete_sequence=["#1565C0"]
-)
-fig_rf.add_trace(
-    go.Scatter(
-        x=[y_test.min(), y_test.max()],
-        y=[y_test.min(), y_test.max()],
-        mode='lines',
-        name='Ideal',
-        line=dict(dash='dash', color='red')
-    )
-)
-st.plotly_chart(fig_rf, use_container_width=True)
 
 # ----------------------------
-# 🤖 Machine Learning: Comparação KNN vs RF
+# 🤖 SEÇÃO DE MACHINE LEARNING MELHORADA
 # ----------------------------
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-
-# Bibliotecas de Machine Learning
-from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-from sklearn.preprocessing import StandardScaler
-
-# Configurar matplotlib para suporte a fontes CJK
-plt.rcParams['font.family'] = ['DejaVu Sans', 'SimHei', 'Noto Sans CJK JP', 'Arial Unicode MS']
-plt.rcParams['axes.unicode_minus'] = False
-
-# Esquema de cores especificado
-CORES = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343', '#FBE842', '#FF9A2E', '#A9AEB8']
-
-def criar_dados_produtividade():
-    """Cria dados simulados de produtividade agrícola"""
-    np.random.seed(42)
-    n_samples = 1000
-    
-    # Variáveis independentes (features)
-    temperatura = np.random.normal(25, 5, n_samples)  # Temperatura média (°C)
-    precipitacao = np.random.normal(800, 200, n_samples)  # Precipitação (mm)
-    ph_solo = np.random.normal(6.5, 0.8, n_samples)  # pH do solo
-    fertilizante = np.random.normal(150, 50, n_samples)  # Quantidade de fertilizante (kg/ha)
-    
-    # Variável dependente (target) - Produtividade
-    # Fórmula simulada baseada nas variáveis independentes
-    produtividade = (
-        0.3 * temperatura + 
-        0.002 * precipitacao + 
-        2.0 * ph_solo + 
-        0.01 * fertilizante + 
-        np.random.normal(0, 2, n_samples)  # Ruído
-    )
-    
-    # Garantir valores positivos e realistas
-    produtividade = np.clip(produtividade, 1, 15)
-    
-    # Criar DataFrame
-    df = pd.DataFrame({
-        'temperatura': temperatura,
-        'precipitacao': precipitacao,
-        'ph_solo': ph_solo,
-        'fertilizante': fertilizante,
-        'produtividade': produtividade
-    })
-    
-    return df
-
-def treinar_modelos(df):
-    """Treina os modelos KNN e Random Forest"""
-    # Preparar dados
-    X = df[['temperatura', 'precipitacao', 'ph_solo', 'fertilizante']]
-    y = df['produtividade']
-    
-    # Dividir dados
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    
-    # Normalizar dados para KNN
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    
-    # Treinar KNN
-    knn = KNeighborsRegressor(n_neighbors=5)
-    knn.fit(X_train_scaled, y_train)
-    y_pred_knn = knn.predict(X_test_scaled)
-    
-    # Treinar Random Forest
-    rf = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf.fit(X_train, y_train)
-    y_pred_rf = rf.predict(X_test)
-    
-    # Calcular métricas
-    metricas = {
-        'KNN': {
-            'r2': r2_score(y_test, y_pred_knn),
-            'rmse': np.sqrt(mean_squared_error(y_test, y_pred_knn)),
-            'mae': mean_absolute_error(y_test, y_pred_knn),
-            'y_pred': y_pred_knn
-        },
-        'Random Forest': {
-            'r2': r2_score(y_test, y_pred_rf),
-            'rmse': np.sqrt(mean_squared_error(y_test, y_pred_rf)),
-            'mae': mean_absolute_error(y_test, y_pred_rf),
-            'y_pred': y_pred_rf
-        }
-    }
-    
-    return metricas, y_test
-
-def configurar_estilo_plotly():
+# Funções auxiliares para gráficos interativos
+def get_plotly_style():
     """Configura o estilo visual para gráficos Plotly"""
     return {
         'plot_bgcolor': 'white',
@@ -608,245 +414,484 @@ def configurar_estilo_plotly():
         }
     }
 
-def criar_grafico_comparacao_geral(metricas):
-    """Cria gráfico de barras agrupadas para comparação geral"""
-    modelos = list(metricas.keys())
-    r2_scores = [metricas[modelo]['r2'] for modelo in modelos]
-    rmse_scores = [metricas[modelo]['rmse'] for modelo in modelos]
-    mae_scores = [metricas[modelo]['mae'] for modelo in modelos]
+def create_interactive_comparison_chart(metrics):
+    """Cria gráfico de comparação interativo melhorado"""
+    # Esquema de cores especificado
+    colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343', '#FBE842', '#FF9A2E', '#A9AEB8']
+    
+    modelos = list(metrics.keys())
+    r2_scores = [metrics[modelo]['r2'] for modelo in modelos]
+    rmse_scores = [metrics[modelo]['rmse'] for modelo in modelos]
+    mae_scores = [metrics[modelo]['mae'] for modelo in modelos]
     
     fig = go.Figure()
     
     # Adicionar barras para cada métrica
     fig.add_trace(go.Bar(
-        name='R²',
+        name='R² (Coeficiente de Determinação)',
         x=modelos,
         y=r2_scores,
-        marker_color=CORES[0],
+        marker_color=colors[0],
         text=[f'{score:.3f}' for score in r2_scores],
         textposition='auto',
-        hovertemplate='<b>%{x}</b><br>R²: %{y:.3f}<extra></extra>'
+        textfont=dict(size=12, color='white'),
+        hovertemplate='<b>%{x}</b><br>' +
+                     'R²: %{y:.3f}<br>' +
+                     '<i>Explica %{customdata:.1f}% da variância</i>' +
+                     '<extra></extra>',
+        customdata=[score * 100 for score in r2_scores],
+        offsetgroup=1
     ))
     
     fig.add_trace(go.Bar(
-        name='RMSE',
+        name='RMSE (Erro Quadrático Médio)',
         x=modelos,
         y=rmse_scores,
-        marker_color=CORES[1],
+        marker_color=colors[1],
         text=[f'{score:.2f}' for score in rmse_scores],
         textposition='auto',
-        hovertemplate='<b>%{x}</b><br>RMSE: %{y:.2f} ton/ha<extra></extra>'
+        textfont=dict(size=12, color='white'),
+        hovertemplate='<b>%{x}</b><br>' +
+                     'RMSE: %{y:.2f} ton/ha<br>' +
+                     '<i>Erro médio quadrático</i>' +
+                     '<extra></extra>',
+        offsetgroup=2
     ))
     
     fig.add_trace(go.Bar(
-        name='MAE',
+        name='MAE (Erro Absoluto Médio)',
         x=modelos,
         y=mae_scores,
-        marker_color=CORES[2],
+        marker_color=colors[2],
         text=[f'{score:.2f}' for score in mae_scores],
         textposition='auto',
-        hovertemplate='<b>%{x}</b><br>MAE: %{y:.2f} ton/ha<extra></extra>'
+        textfont=dict(size=12, color='white'),
+        hovertemplate='<b>%{x}</b><br>' +
+                     'MAE: %{y:.2f} ton/ha<br>' +
+                     '<i>Erro médio absoluto</i>' +
+                     '<extra></extra>',
+        offsetgroup=3
+    ))
+    
+    # Adicionar anotações para melhor modelo
+    annotations = []
+    
+    # Determinar melhor modelo para cada métrica
+    melhor_r2_idx = np.argmax(r2_scores)
+    melhor_rmse_idx = np.argmin(rmse_scores)
+    
+    # Anotação para melhor R²
+    annotations.append(dict(
+        x=modelos[melhor_r2_idx],
+        y=r2_scores[melhor_r2_idx] + max(r2_scores) * 0.1,
+        text="🏆 Melhor R²",
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor=colors[0],
+        font=dict(color=colors[0], size=10)
+    ))
+    
+    # Anotação para melhor RMSE
+    annotations.append(dict(
+        x=modelos[melhor_rmse_idx],
+        y=rmse_scores[melhor_rmse_idx] + max(rmse_scores) * 0.1,
+        text="🎯 Menor RMSE",
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor=colors[1],
+        font=dict(color=colors[1], size=10)
     ))
     
     fig.update_layout(
         title={
-            'text': 'Comparação de Desempenho: KNN vs Random Forest',
+            'text': '🤖 Comparação Interativa: KNN vs Random Forest<br>' +
+                   '<sub>Análise de Desempenho para Predição de Produtividade Agrícola</sub>',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 18, 'color': '#333333'}
+            'font': {'size': 20, 'color': '#333333'}
         },
-        xaxis_title='Modelos',
+        xaxis_title='Modelos de Machine Learning',
         yaxis_title='Valores das Métricas',
         barmode='group',
         legend=dict(
             orientation="h",
             yanchor="bottom",
             y=1.02,
-            xanchor="right",
-            x=1
+            xanchor="center",
+            x=0.5,
+            font=dict(size=12)
         ),
-        **configurar_estilo_plotly()
+        height=600,
+        annotations=annotations,
+        **get_plotly_style()
+    )
+    
+    # Adicionar botões para filtrar métricas
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="left",
+                buttons=list([
+                    dict(
+                        args=[{"visible": [True, True, True]}],
+                        label="Todas as Métricas",
+                        method="restyle"
+                    ),
+                    dict(
+                        args=[{"visible": [True, False, False]}],
+                        label="Apenas R²",
+                        method="restyle"
+                    ),
+                    dict(
+                        args=[{"visible": [False, True, False]}],
+                        label="Apenas RMSE",
+                        method="restyle"
+                    ),
+                    dict(
+                        args=[{"visible": [False, False, True]}],
+                        label="Apenas MAE",
+                        method="restyle"
+                    ),
+                ]),
+                pad={"r": 10, "t": 10},
+                showactive=True,
+                x=0.01,
+                xanchor="left",
+                y=1.15,
+                yanchor="top"
+            ),
+        ]
     )
     
     return fig
 
-def criar_graficos_individuais(metricas):
-    """Cria gráficos individuais para cada métrica"""
-    modelos = list(metricas.keys())
+def create_dashboard_comparison(metrics, y_test):
+    """Cria dashboard completo com múltiplos gráficos"""
+    colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343']
     
-    # Gráfico R²
-    fig_r2 = go.Figure(data=[
-        go.Bar(
-            x=modelos,
-            y=[metricas[modelo]['r2'] for modelo in modelos],
-            marker_color=[CORES[0], CORES[3]],
-            text=[f'{metricas[modelo]["r2"]:.3f}' for modelo in modelos],
-            textposition='auto',
-            hovertemplate='<b>%{x}</b><br>R²: %{y:.3f}<extra></extra>'
-        )
-    ])
-    
-    fig_r2.update_layout(
-        title={
-            'text': 'Coeficiente de Determinação (R²)',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 16, 'color': '#333333'}
-        },
-        xaxis_title='Modelos',
-        yaxis_title='R² Score',
-        **configurar_estilo_plotly()
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=(
+            'Comparação de Métricas R²',
+            'Distribuição de Erros',
+            'Real vs Predito - KNN',
+            'Real vs Predito - Random Forest'
+        ),
+        specs=[[{"secondary_y": False}, {"secondary_y": False}],
+               [{"secondary_y": False}, {"secondary_y": False}]],
+        vertical_spacing=0.12,
+        horizontal_spacing=0.1
     )
     
-    # Gráfico RMSE
-    fig_rmse = go.Figure(data=[
-        go.Bar(
-            x=modelos,
-            y=[metricas[modelo]['rmse'] for modelo in modelos],
-            marker_color=[CORES[1], CORES[4]],
-            text=[f'{metricas[modelo]["rmse"]:.2f}' for modelo in modelos],
-            textposition='auto',
-            hovertemplate='<b>%{x}</b><br>RMSE: %{y:.2f} ton/ha<extra></extra>'
-        )
-    ])
+    # 1. Gráfico de barras de comparação R²
+    modelos = list(metrics.keys())
+    r2_scores = [metrics[modelo]['r2'] for modelo in modelos]
     
-    fig_rmse.update_layout(
-        title={
-            'text': 'Erro Quadrático Médio (RMSE)',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 16, 'color': '#333333'}
-        },
-        xaxis_title='Modelos',
-        yaxis_title='RMSE (ton/ha)',
-        **configurar_estilo_plotly()
+    fig.add_trace(
+        go.Bar(
+            name='R²', 
+            x=modelos, 
+            y=r2_scores, 
+            marker_color=colors[0],
+            text=[f'{score:.3f}' for score in r2_scores],
+            textposition='auto'
+        ),
+        row=1, col=1
     )
     
-    # Gráfico MAE
-    fig_mae = go.Figure(data=[
-        go.Bar(
-            x=modelos,
-            y=[metricas[modelo]['mae'] for modelo in modelos],
-            marker_color=[CORES[2], CORES[5]],
-            text=[f'{metricas[modelo]["mae"]:.2f}' for modelo in modelos],
-            textposition='auto',
-            hovertemplate='<b>%{x}</b><br>MAE: %{y:.2f} ton/ha<extra></extra>'
-        )
-    ])
+    # 2. Distribuição de erros
+    erros_knn = np.abs(y_test - metrics['KNN']['y_pred'])
+    erros_rf = np.abs(y_test - metrics['Random Forest']['y_pred'])
     
-    fig_mae.update_layout(
-        title={
-            'text': 'Erro Absoluto Médio (MAE)',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 16, 'color': '#333333'}
-        },
-        xaxis_title='Modelos',
-        yaxis_title='MAE (ton/ha)',
-        **configurar_estilo_plotly()
+    fig.add_trace(
+        go.Histogram(x=erros_knn, name='Erros KNN', marker_color=colors[0], opacity=0.7, nbinsx=20),
+        row=1, col=2
+    )
+    fig.add_trace(
+        go.Histogram(x=erros_rf, name='Erros RF', marker_color=colors[3], opacity=0.7, nbinsx=20),
+        row=1, col=2
     )
     
-    return fig_r2, fig_rmse, fig_mae
+    # 3. Scatter KNN
+    fig.add_trace(
+        go.Scatter(
+            x=y_test, y=metrics['KNN']['y_pred'],
+            mode='markers', name='KNN',
+            marker=dict(color=colors[0], size=4, opacity=0.6),
+            hovertemplate='<b>KNN</b><br>Real: %{x:.2f}<br>Predito: %{y:.2f}<extra></extra>'
+        ),
+        row=2, col=1
+    )
+    
+    # 4. Scatter Random Forest
+    fig.add_trace(
+        go.Scatter(
+            x=y_test, y=metrics['Random Forest']['y_pred'],
+            mode='markers', name='Random Forest',
+            marker=dict(color=colors[3], size=4, opacity=0.6),
+            hovertemplate='<b>Random Forest</b><br>Real: %{x:.2f}<br>Predito: %{y:.2f}<extra></extra>'
+        ),
+        row=2, col=2
+    )
+    
+    # Linhas ideais para os scatters
+    min_val = min(y_test.min(), metrics['KNN']['y_pred'].min(), metrics['Random Forest']['y_pred'].min())
+    max_val = max(y_test.max(), metrics['KNN']['y_pred'].max(), metrics['Random Forest']['y_pred'].max())
+    
+    for col in [1, 2]:
+        fig.add_trace(
+            go.Scatter(
+                x=[min_val, max_val], y=[min_val, max_val],
+                mode='lines', name='Ideal',
+                line=dict(dash='dash', color='red', width=2),
+                showlegend=(col == 1),
+                hovertemplate='Linha Ideal<extra></extra>'
+            ),
+            row=2, col=col
+        )
+    
+    fig.update_layout(
+        title={
+            'text': '📊 Dashboard Completo: Análise KNN vs Random Forest',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 18, 'color': '#333333'}
+        },
+        height=800,
+        **get_plotly_style()
+    )
+    
+    # Atualizar eixos
+    fig.update_xaxes(title_text="Modelos", row=1, col=1)
+    fig.update_yaxes(title_text="R² Score", row=1, col=1)
+    fig.update_xaxes(title_text="Erro Absoluto", row=1, col=2)
+    fig.update_yaxes(title_text="Frequência", row=1, col=2)
+    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=1)
+    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=1)
+    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=2)
+    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=2)
+    
+    return fig
 
-def criar_grafico_matplotlib(metricas):
-    """Cria gráfico estático com matplotlib seguindo o código original"""
-    modelos = list(metricas.keys())
-    r2_scores = [metricas[modelo]['r2'] for modelo in modelos]
-    rmse_scores = [metricas[modelo]['rmse'] for modelo in modelos]
-    mae_scores = [metricas[modelo]['mae'] for modelo in modelos]
-    
-    x = np.arange(len(modelos))
-    width = 0.25
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    # Configurar estilo
-    ax.set_facecolor('white')
-    ax.grid(True, linestyle='--', alpha=0.7, color='#E0E0E0')
-    ax.set_axisbelow(True)
-    
-    # Criar barras
-    bars1 = ax.bar(x - width, r2_scores, width, label='R²', color=CORES[0], alpha=0.8)
-    bars2 = ax.bar(x, rmse_scores, width, label='RMSE', color=CORES[1], alpha=0.8)
-    bars3 = ax.bar(x + width, mae_scores, width, label='MAE', color=CORES[2], alpha=0.8)
-    
-    # Adicionar valores nas barras
-    for bars in [bars1, bars2, bars3]:
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{height:.2f}',
-                   ha='center', va='bottom', fontsize=10)
-    
-    ax.set_xlabel('Modelos', fontsize=12)
-    ax.set_ylabel('Valores das Métricas', fontsize=12)
-    ax.set_title('Desempenho dos Modelos - KNN vs Random Forest', fontsize=16, fontweight='bold', pad=20)
-    ax.set_xticks(x)
-    ax.set_xticklabels(modelos)
-    ax.legend()
-    
-    plt.tight_layout()
-    plt.savefig('/home/ubuntu/comparacao_modelos_matplotlib.png', dpi=300, bbox_inches='tight', facecolor='white')
-    plt.close()
+# SEÇÃO PRINCIPAL DE MACHINE LEARNING
+st.markdown('<div class="ml-section">', unsafe_allow_html=True)
+st.markdown('<div class="comparison-header">🤖 Machine Learning: Comparação Interativa KNN vs Random Forest</div>', unsafe_allow_html=True)
 
-def main():
-    """Função principal"""
-    print("🚀 Iniciando análise de modelos de Machine Learning...")
-    
-    # Criar dados
-    print("📊 Criando dados de produtividade agrícola...")
-    df = criar_dados_produtividade()
-    
-    # Treinar modelos
-    print("🤖 Treinando modelos KNN e Random Forest...")
-    metricas, y_test = treinar_modelos(df)
-    
-    # Exibir resultados
-    print("\n📈 Resultados dos Modelos:")
-    for modelo, resultado in metricas.items():
-        print(f"\n{modelo}:")
-        print(f"  R²: {resultado['r2']:.3f}")
-        print(f"  RMSE: {resultado['rmse']:.2f} ton/ha")
-        print(f"  MAE: {resultado['mae']:.2f} ton/ha")
-    
-    # Criar gráficos
-    print("\n🎨 Criando gráficos de comparação...")
-    
-    # Gráfico de comparação geral
-    fig_comparacao = criar_grafico_comparacao_geral(metricas)
-    fig_comparacao.write_html("/home/ubuntu/comparacao_geral.html")
-    fig_comparacao.write_image("/home/ubuntu/comparacao_geral.png", width=1000, height=600)
-    
-    # Gráficos individuais
-    fig_r2, fig_rmse, fig_mae = criar_graficos_individuais(metricas)
-    
-    fig_r2.write_html("/home/ubuntu/grafico_r2.html")
-    fig_r2.write_image("/home/ubuntu/grafico_r2.png", width=800, height=500)
-    
-    fig_rmse.write_html("/home/ubuntu/grafico_rmse.html")
-    fig_rmse.write_image("/home/ubuntu/grafico_rmse.png", width=800, height=500)
-    
-    fig_mae.write_html("/home/ubuntu/grafico_mae.html")
-    fig_mae.write_image("/home/ubuntu/grafico_mae.png", width=800, height=500)
-    
-    # Gráfico matplotlib
-    criar_grafico_matplotlib(metricas)
-    
-    print("\n✅ Todos os gráficos foram criados com sucesso!")
-    print("\n📁 Arquivos gerados:")
-    print("  • comparacao_geral.html (interativo)")
-    print("  • comparacao_geral.png")
-    print("  • grafico_r2.html (interativo)")
-    print("  • grafico_r2.png")
-    print("  • grafico_rmse.html (interativo)")
-    print("  • grafico_rmse.png")
-    print("  • grafico_mae.html (interativo)")
-    print("  • grafico_mae.png")
-    print("  • comparacao_modelos_matplotlib.png")
+# Sidebar para configurações ML
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ⚙️ Configurações ML")
+knn_neighbors = st.sidebar.slider("KNN - Número de Vizinhos", 3, 15, 5, 1)
+rf_estimators = st.sidebar.slider("Random Forest - Número de Árvores", 50, 200, 100, 25)
+test_size = st.sidebar.slider("Tamanho do Conjunto de Teste (%)", 10, 40, 20, 5) / 100
 
-if __name__ == "__main__":
-    main()
+# Verifica se as colunas necessárias estão presentes
+knn_required = ["Rainfall_mm", "Temperature_Celsius", "Soil_Type", "Crop", "Yield_tons_per_hectare"]
+missing_knn_cols = [col for col in knn_required if col not in filtered_df.columns]
 
+if missing_knn_cols:
+    st.warning(f"Colunas faltando para análise de Machine Learning: {', '.join(missing_knn_cols)}")
+else:
+    df_ml = filtered_df[knn_required].dropna().copy()
+
+    if df_ml.empty:
+        st.warning("⚠️ Dados insuficientes para treinamento do modelo.")
+    else:
+        # Imports necessários
+        from sklearn.model_selection import train_test_split
+        from sklearn.neighbors import KNeighborsRegressor
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.preprocessing import LabelEncoder, StandardScaler
+        from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
+        # Encoding de variáveis categóricas
+        label_encoder_soil = LabelEncoder()
+        label_encoder_crop = LabelEncoder()
+        df_ml["Soil_Type"] = label_encoder_soil.fit_transform(df_ml["Soil_Type"])
+        df_ml["Crop"] = label_encoder_crop.fit_transform(df_ml["Crop"])
+
+        # Variáveis independentes e alvo
+        X = df_ml.drop("Yield_tons_per_hectare", axis=1)
+        y = df_ml["Yield_tons_per_hectare"]
+
+        # Treino/teste
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+
+        # Normalizar dados para KNN
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        # Treinamento dos modelos
+        with st.spinner("🔄 Treinando modelos KNN e Random Forest..."):
+            # KNN
+            knn = KNeighborsRegressor(n_neighbors=knn_neighbors)
+            knn.fit(X_train_scaled, y_train)
+            y_pred_knn = knn.predict(X_test_scaled)
+
+            # Random Forest
+            rf = RandomForestRegressor(n_estimators=rf_estimators, random_state=42)
+            rf.fit(X_train, y_train)
+            y_pred_rf = rf.predict(X_test)
+
+        # Cálculo das métricas
+        metrics = {
+            'KNN': {
+                'r2': r2_score(y_test, y_pred_knn),
+                'rmse': np.sqrt(mean_squared_error(y_test, y_pred_knn)),
+                'mae': mean_absolute_error(y_test, y_pred_knn),
+                'y_pred': y_pred_knn
+            },
+            'Random Forest': {
+                'r2': r2_score(y_test, y_pred_rf),
+                'rmse': np.sqrt(mean_squared_error(y_test, y_pred_rf)),
+                'mae': mean_absolute_error(y_test, y_pred_rf),
+                'y_pred': y_pred_rf
+            }
+        }
+
+        # Exibição das métricas em cards melhorados
+        st.subheader("📊 Resultados dos Modelos")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 🔍 K-Nearest Neighbors (KNN)")
+            knn_col1, knn_col2, knn_col3 = st.columns(3)
+            knn_col1.metric("📈 R²", f"{metrics['KNN']['r2']:.3f}")
+            knn_col2.metric("📉 RMSE", f"{metrics['KNN']['rmse']:.2f} ton/ha")
+            knn_col3.metric("📏 MAE", f"{metrics['KNN']['mae']:.2f} ton/ha")
+        
+        with col2:
+            st.markdown("#### 🌲 Random Forest")
+            rf_col1, rf_col2, rf_col3 = st.columns(3)
+            rf_col1.metric("📈 R²", f"{metrics['Random Forest']['r2']:.3f}")
+            rf_col2.metric("📉 RMSE", f"{metrics['Random Forest']['rmse']:.2f} ton/ha")
+            rf_col3.metric("📏 MAE", f"{metrics['Random Forest']['mae']:.2f} ton/ha")
+
+        # Análise comparativa
+        st.subheader("🏆 Análise Comparativa")
+        melhor_r2 = max(metrics, key=lambda x: metrics[x]['r2'])
+        melhor_rmse = min(metrics, key=lambda x: metrics[x]['rmse'])
+        melhor_mae = min(metrics, key=lambda x: metrics[x]['mae'])
+        
+        col1, col2, col3 = st.columns(3)
+        col1.success(f"🏆 Melhor R²: **{melhor_r2}** ({metrics[melhor_r2]['r2']:.3f})")
+        col2.success(f"🎯 Menor RMSE: **{melhor_rmse}** ({metrics[melhor_rmse]['rmse']:.2f})")
+        col3.success(f"📏 Menor MAE: **{melhor_mae}** ({metrics[melhor_mae]['mae']:.2f})")
+
+        # GRÁFICO PRINCIPAL INTERATIVO MELHORADO
+        st.subheader("🎨 Gráfico de Comparação Interativo")
+        fig_comparison = create_interactive_comparison_chart(metrics)
+        st.plotly_chart(fig_comparison, use_container_width=True)
+
+        # DASHBOARD COMPLETO
+        st.subheader("📋 Dashboard Completo de Análise")
+        fig_dashboard = create_dashboard_comparison(metrics, y_test)
+        st.plotly_chart(fig_dashboard, use_container_width=True)
+
+        # Gráficos individuais melhorados
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("🔍 KNN: Real vs Predito")
+            comparison_knn_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred_knn})
+            fig_knn = px.scatter(
+                comparison_knn_df,
+                x="Real",
+                y="Previsto",
+                title="KNN: Produtividade Real vs Predita",
+                labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Predita (ton/ha)"},
+                color_discrete_sequence=["#4080FF"]
+            )
+            fig_knn.add_trace(
+                go.Scatter(
+                    x=[y_test.min(), y_test.max()],
+                    y=[y_test.min(), y_test.max()],
+                    mode='lines',
+                    name='Ideal',
+                    line=dict(dash='dash', color='red')
+                )
+            )
+            fig_knn.update_layout(**get_plotly_style())
+            st.plotly_chart(fig_knn, use_container_width=True)
+
+        with col2:
+            st.subheader("🌲 Random Forest: Real vs Predito")
+            comparison_rf_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred_rf})
+            fig_rf = px.scatter(
+                comparison_rf_df,
+                x="Real",
+                y="Previsto",
+                title="Random Forest: Produtividade Real vs Predita",
+                labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Predita (ton/ha)"},
+                color_discrete_sequence=["#23C343"]
+            )
+            fig_rf.add_trace(
+                go.Scatter(
+                    x=[y_test.min(), y_test.max()],
+                    y=[y_test.min(), y_test.max()],
+                    mode='lines',
+                    name='Ideal',
+                    line=dict(dash='dash', color='red')
+                )
+            )
+            fig_rf.update_layout(**get_plotly_style())
+            st.plotly_chart(fig_rf, use_container_width=True)
+
+        # Interpretação dos resultados
+        with st.expander("💡 Interpretação dos Resultados"):
+            st.markdown("""
+            **Explicação das Métricas:**
+            - **R² (Coeficiente de Determinação)**: Indica a proporção da variância explicada pelo modelo (0-1, quanto maior melhor)
+            - **RMSE (Erro Quadrático Médio)**: Penaliza mais os erros grandes (quanto menor melhor)
+            - **MAE (Erro Absoluto Médio)**: Média dos erros absolutos (quanto menor melhor)
+            
+            **Como Interpretar os Gráficos:**
+            - **Gráfico de Comparação**: Permite filtrar métricas específicas usando os botões
+            - **Real vs Predito**: Pontos próximos à linha vermelha indicam predições mais precisas
+            - **Dashboard Completo**: Visão abrangente com múltiplas perspectivas dos resultados
+            """)
+
+        # Download dos resultados
+        with st.expander("💾 Download dos Resultados"):
+            # Criar DataFrame com resultados
+            results_df = pd.DataFrame({
+                'Modelo': list(metrics.keys()),
+                'R²': [metrics[modelo]['r2'] for modelo in metrics.keys()],
+                'RMSE': [metrics[modelo]['rmse'] for modelo in metrics.keys()],
+                'MAE': [metrics[modelo]['mae'] for modelo in metrics.keys()]
+            })
+            
+            st.dataframe(results_df, use_container_width=True)
+            
+            # Download CSV
+            csv_results = results_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Baixar Métricas (CSV)",
+                data=csv_results,
+                file_name="metricas_ml_comparacao.csv",
+                mime="text/csv"
+            )
+            
+            # Download predições
+            predictions_df = pd.DataFrame({
+                'Real': y_test,
+                'KNN_Predito': y_pred_knn,
+                'RF_Predito': y_pred_rf
+            })
+            csv_predictions = predictions_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Baixar Predições (CSV)",
+                data=csv_predictions,
+                file_name="predicoes_ml_comparacao.csv",
+                mime="text/csv"
+            )
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer
+st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666;'>
@@ -854,5 +899,3 @@ st.markdown(
     </div>
     """, 
     unsafe_allow_html=True
-)
-
