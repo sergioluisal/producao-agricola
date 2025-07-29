@@ -892,9 +892,9 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
-    """
+st.markdown("""
     <div style='text-align: center; color: #666;'>
         <p>🌾 Dashboard de Análise Agrícola | Desenvolvido por Sérgio</p>
     </div>
-    """, 
+    """), 
     unsafe_allow_html=True
