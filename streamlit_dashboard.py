@@ -522,12 +522,12 @@ def create_interactive_comparison_chart_transparent(metrics):
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=1.02,
+            y=1.05,
             xanchor="center",
             x=0.5,
             font=dict(size=12)
         ),
-        height=650,
+        height=700,
         annotations=annotations,
         **get_plotly_style_transparent()
     )
@@ -536,7 +536,7 @@ def create_interactive_comparison_chart_transparent(metrics):
     fig.add_annotation(
         text="📘 <b>R²</b>: Coef. Determinação &nbsp;&nbsp;&nbsp; 🔵 <b>RMSE</b>: Erro Quadrático Médio &nbsp;&nbsp;&nbsp; 🟢 <b>MAE</b>: Erro Absoluto Médio",
         xref="paper", yref="paper",
-        x=0, y=1.12,
+        x=0, y=0.98,
         showarrow=False,
         align="left",
         font=dict(size=12, color="white"),
@@ -575,7 +575,7 @@ def create_interactive_comparison_chart_transparent(metrics):
                 showactive=True,
                 x=0.01,
                 xanchor="left",
-                y=1.08,
+                y=0.93,
                 yanchor="top"
             ),
         ]
