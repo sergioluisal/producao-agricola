@@ -502,12 +502,12 @@ rf_scores = [r2_rf, rmse_rf, mae_rf]
 y = np.arange(len(metricas))
 height = 0.35
 
-# Figura menor e sem fundo
-fig, ax = plt.subplots(figsize=(6, 4), facecolor='none')
+# Figura menor com fundo transparente
+fig, ax = plt.subplots(figsize=(8, 4.5), facecolor='none')
 fig.patch.set_alpha(0)
 ax.set_facecolor('none')
 
-# Barras sem bordas
+# Barras
 bars_knn = ax.barh(y - height/2, knn_scores, height, label='KNN', color='#00C853')
 bars_rf = ax.barh(y + height/2, rf_scores, height, label='Random Forest', color='#2979FF')
 
@@ -518,30 +518,32 @@ def autolabel(bars):
         ax.annotate(f'{width:.2f}',
                     xy=(width, bar.get_y() + bar.get_height() / 2),
                     xytext=(5, 0), textcoords="offset points",
-                    ha='left', va='center', fontsize=8, color='white')
+                    ha='left', va='center',
+                    fontsize=10, fontweight='bold', color='white', family='DejaVu Sans')
 
 autolabel(bars_knn)
 autolabel(bars_rf)
 
-# Layout e estilo
+# Layout e estilo textual moderno
 ax.set_yticks(y)
-ax.set_yticklabels(metricas, fontsize=12, color='white')
-ax.set_xlabel("Valor da Métrica", fontsize=8, color='white')
-#ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=14, fontweight='bold', color='white')
+ax.set_yticklabels(metricas, fontsize=12, fontweight='bold', color='white', family='DejaVu Sans')
+ax.set_xlabel("Valor da Métrica", fontsize=12, fontweight='bold', color='white', family='DejaVu Sans')
+ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=14, fontweight='bold', color='white', family='DejaVu Sans')
 
-# Tira linhas do gráfico
+# Tira linhas e bordas
 ax.tick_params(axis='x', colors='white')
 ax.tick_params(axis='y', colors='white')
-ax.grid(False)  # <- REMOVE AS LINHAS DO FUNDO
+ax.grid(False)
 
-# Remove bordas dos eixos
 for spine in ax.spines.values():
     spine.set_visible(False)
 
-# Legenda personalizada
+# Legenda estilizada
 legend = ax.legend(frameon=True, facecolor='#1e1e1e', edgecolor='white')
 for text in legend.get_texts():
     text.set_color("white")
+    text.set_fontweight("bold")
+    text.set_fontfamily("DejaVu Sans")
 
 # Exibir no Streamlit
 st.pyplot(fig)
