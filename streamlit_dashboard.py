@@ -484,15 +484,17 @@ st.plotly_chart(fig_rf, use_container_width=True)
 # 🤖 Machine Learning: Comparação KNN vs RF
 # ----------------------------
 
-# Comparação KNN vs RF - gráfico de barras com visual aprimorado
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
 st.subheader("📊 Comparativo de Desempenho: KNN vs Random Forest")
 
-sns.set(style="whitegrid")
+# Ativar estilo escuro e grid elegante
+plt.style.use('dark_background')
+sns.set_context("notebook", font_scale=1.1)
 
+# Dados
 modelos = ['KNN', 'Random Forest']
 r2_scores = [r2, r2_rf]
 rmse_scores = [rmse, rmse_rf]
@@ -501,30 +503,41 @@ mae_scores = [mae, mae_rf]
 x = np.arange(len(modelos))
 width = 0.25
 
-plt.style.use('dark_background')  # Aplica fundo escuro
 fig, ax = plt.subplots(figsize=(10, 6))
 
+# Barras com cores modernas e bordas
+bars_r2 = ax.bar(x - width, r2_scores, width, label='R²', color='#00C853', edgecolor='white')
+bars_rmse = ax.bar(x, rmse_scores, width, label='RMSE', color='#FFA000', edgecolor='white')
+bars_mae = ax.bar(x + width, mae_scores, width, label='MAE', color='#2979FF', edgecolor='white')
 
-bars_r2 = ax.bar(x - width, r2_scores, width, label='R²', color='#4CAF50')
-bars_rmse = ax.bar(x, rmse_scores, width, label='RMSE', color='#FF9800')
-bars_mae = ax.bar(x + width, mae_scores, width, label='MAE', color='#2196F3')
-
+# Adicionar valores nas barras
 def autolabel(bars):
     for bar in bars:
         height = bar.get_height()
-        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
-                    xytext=(0, 5), textcoords="offset points",
-                    ha='center', va='bottom', fontsize=9)
+        ax.annotate(f'{height:.2f}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 6),
+                    textcoords="offset points",
+                    ha='center', va='bottom',
+                    fontsize=10, color='white')
 
 autolabel(bars_r2)
 autolabel(bars_rmse)
 autolabel(bars_mae)
 
+# Ajustes de layout
 ax.set_xticks(x)
-ax.set_xticklabels(modelos, fontsize=12)
-ax.set_ylabel("Valor", fontsize=12)
-#ax.set_title("📊 Comparativo de Desempenho: KNN vs Random Forest", fontsize=14, fontweight='bold')
-ax.legend()
+ax.set_xticklabels(modelos, fontsize=12, color='white')
+ax.set_ylabel("Valor", fontsize=12, color='white')
+ax.set_title("📊 Comparativo de Desempenho dos Modelos", fontsize=14, fontweight='bold', color='white')
+ax.tick_params(axis='y', colors='white')
+ax.spines['bottom'].set_color('white')
+ax.spines['left'].set_color('white')
+
+# Legenda customizada
+legend = ax.legend(frameon=True, facecolor='#1e1e1e', edgecolor='white', labelcolor='white')
+for text in legend.get_texts():
+    text.set_color("white")
 
 st.pyplot(fig)
 
