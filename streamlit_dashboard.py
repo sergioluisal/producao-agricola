@@ -221,7 +221,8 @@ if not filtered_df.empty:
         fig_crop.update_layout(
             showlegend=False,
             plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white')
         )
         st.plotly_chart(fig_crop, use_container_width=True)
 
@@ -242,7 +243,8 @@ if not filtered_df.empty:
         fig_region.update_layout(
             showlegend=False,
             plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white')
         )
         st.plotly_chart(fig_region, use_container_width=True)
 
@@ -265,7 +267,8 @@ if not filtered_df.empty:
         fig_soil.update_layout(
             showlegend=False,
             plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white')
         )
         fig_soil.update_xaxes(tickangle=45)
         st.plotly_chart(fig_soil, use_container_width=True)
@@ -295,7 +298,8 @@ if not filtered_df.empty:
 
         fig_scatter.update_layout(
             plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white')
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
@@ -311,7 +315,8 @@ if not filtered_df.empty:
     fig_hist.update_layout(
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white')
     )
     st.plotly_chart(fig_hist, use_container_width=True)
 
@@ -389,16 +394,16 @@ else:
 st.markdown("---")
 
 # ----------------------------
-# 🤖 SEÇÃO DE MACHINE LEARNING MELHORADA COM FUNDO TRANSPARENTE
+# 🤖 SEÇÃO DE MACHINE LEARNING MELHORADA COM LEGENDAS CORRIGIDAS
 # ----------------------------
 
-# Funções auxiliares para gráficos interativos com fundo transparente
-def get_plotly_style_transparent():
-    """Configura o estilo visual para gráficos Plotly com fundo transparente"""
+# Funções auxiliares para gráficos interativos com legendas corrigidas
+def get_plotly_style_corrected():
+    """Configura o estilo visual para gráficos Plotly com legendas corrigidas"""
     return {
-        'plot_bgcolor': 'rgba(0,0,0,0)',  # Fundo transparente
-        'paper_bgcolor': 'rgba(0,0,0,0)',  # Fundo do papel transparente
-        'font': {'family': 'Arial, sans-serif', 'size': 12, 'color': '#333333'},
+        'plot_bgcolor': 'rgba(0,0,0,0)',
+        'paper_bgcolor': 'rgba(0,0,0,0)',
+        'font': {'family': 'Arial, sans-serif', 'size': 12, 'color': 'white'},
         'xaxis': {
             'showgrid': True,
             'gridwidth': 1,
@@ -406,7 +411,9 @@ def get_plotly_style_transparent():
             'griddash': 'dash',
             'showline': True,
             'linewidth': 1,
-            'linecolor': '#CCCCCC'
+            'linecolor': '#CCCCCC',
+            'tickfont': {'color': 'white'},
+            'titlefont': {'color': 'white'}
         },
         'yaxis': {
             'showgrid': True,
@@ -415,13 +422,14 @@ def get_plotly_style_transparent():
             'griddash': 'dash',
             'showline': True,
             'linewidth': 1,
-            'linecolor': '#CCCCCC'
+            'linecolor': '#CCCCCC',
+            'tickfont': {'color': 'white'},
+            'titlefont': {'color': 'white'}
         }
     }
 
-def create_interactive_comparison_chart_transparent(metrics):
-    """Cria gráfico de comparação interativo melhorado com fundo transparente"""
-    # Esquema de cores especificado
+def create_interactive_comparison_chart_corrected(metrics):
+    """Cria gráfico de comparação interativo com legendas corrigidas"""
     colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343', '#FBE842', '#FF9A2E', '#A9AEB8']
     
     modelos = list(metrics.keys())
@@ -481,11 +489,9 @@ def create_interactive_comparison_chart_transparent(metrics):
     # Adicionar anotações para melhor modelo
     annotations = []
     
-    # Determinar melhor modelo para cada métrica
     melhor_r2_idx = np.argmax(r2_scores)
     melhor_rmse_idx = np.argmin(rmse_scores)
     
-    # Anotação para melhor R²
     annotations.append(dict(
         x=modelos[melhor_r2_idx],
         y=r2_scores[melhor_r2_idx] + max(r2_scores) * 0.1,
@@ -493,10 +499,9 @@ def create_interactive_comparison_chart_transparent(metrics):
         showarrow=True,
         arrowhead=2,
         arrowcolor=colors[0],
-        font=dict(color=colors[0], size=10)
+        font=dict(color='white', size=12)
     ))
     
-    # Anotação para melhor RMSE
     annotations.append(dict(
         x=modelos[melhor_rmse_idx],
         y=rmse_scores[melhor_rmse_idx] + max(rmse_scores) * 0.1,
@@ -504,7 +509,7 @@ def create_interactive_comparison_chart_transparent(metrics):
         showarrow=True,
         arrowhead=2,
         arrowcolor=colors[1],
-        font=dict(color=colors[1], size=10)
+        font=dict(color='white', size=12)
     ))
     
     fig.update_layout(
@@ -513,25 +518,29 @@ def create_interactive_comparison_chart_transparent(metrics):
                    '<sub>Análise de Desempenho para Predição de Produtividade Agrícola</sub>',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 20, 'color': '#333333'}
+            'font': {'size': 20, 'color': 'white'}
         },
         xaxis_title='Modelos de Machine Learning',
         yaxis_title='Valores das Métricas',
         barmode='group',
         legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="center",
-            x=0.5,
-            font=dict(size=12)
+            orientation="v",  # Vertical para evitar sobreposição
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=1.02,  # Posicionar à direita do gráfico
+            font=dict(size=11, color='white'),
+            bgcolor='rgba(0,0,0,0.3)',  # Fundo semi-transparente
+            bordercolor='white',
+            borderwidth=1
         ),
         height=600,
         annotations=annotations,
-        **get_plotly_style_transparent()
+        margin=dict(r=200),  # Margem direita para acomodar legenda
+        **get_plotly_style_corrected()
     )
     
-    # Adicionar botões para filtrar métricas
+    # Botões para filtrar métricas com estilo corrigido
     fig.update_layout(
         updatemenus=[
             dict(
@@ -564,15 +573,18 @@ def create_interactive_comparison_chart_transparent(metrics):
                 x=0.01,
                 xanchor="left",
                 y=1.15,
-                yanchor="top"
+                yanchor="top",
+                bgcolor='rgba(255,255,255,0.1)',
+                bordercolor='white',
+                font=dict(color='white')
             ),
         ]
     )
     
     return fig
 
-def create_dashboard_comparison_transparent(metrics, y_test):
-    """Cria dashboard completo com múltiplos gráficos com fundo transparente"""
+def create_dashboard_comparison_corrected(metrics, y_test):
+    """Cria dashboard completo com legendas corrigidas"""
     colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343']
     
     fig = make_subplots(
@@ -585,8 +597,8 @@ def create_dashboard_comparison_transparent(metrics, y_test):
         ),
         specs=[[{"secondary_y": False}, {"secondary_y": False}],
                [{"secondary_y": False}, {"secondary_y": False}]],
-        vertical_spacing=0.12,
-        horizontal_spacing=0.1
+        vertical_spacing=0.15,
+        horizontal_spacing=0.12
     )
     
     # 1. Gráfico de barras de comparação R²
@@ -600,7 +612,8 @@ def create_dashboard_comparison_transparent(metrics, y_test):
             y=r2_scores, 
             marker_color=colors[0],
             text=[f'{score:.3f}' for score in r2_scores],
-            textposition='auto'
+            textposition='auto',
+            textfont=dict(color='white')
         ),
         row=1, col=1
     )
@@ -661,21 +674,36 @@ def create_dashboard_comparison_transparent(metrics, y_test):
             'text': '📊 Dashboard Completo: Análise KNN vs Random Forest',
             'x': 0.5,
             'xanchor': 'center',
-            'font': {'size': 18, 'color': '#333333'}
+            'font': {'size': 18, 'color': 'white'}
         },
         height=800,
-        **get_plotly_style_transparent()
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02,
+            font=dict(size=10, color='white'),
+            bgcolor='rgba(0,0,0,0.3)',
+            bordercolor='white',
+            borderwidth=1
+        ),
+        margin=dict(r=150),
+        **get_plotly_style_corrected()
     )
     
-    # Atualizar eixos
-    fig.update_xaxes(title_text="Modelos", row=1, col=1)
-    fig.update_yaxes(title_text="R² Score", row=1, col=1)
-    fig.update_xaxes(title_text="Erro Absoluto", row=1, col=2)
-    fig.update_yaxes(title_text="Frequência", row=1, col=2)
-    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=1)
-    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=1)
-    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=2)
-    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=2)
+    # Atualizar eixos com cores brancas
+    fig.update_xaxes(title_text="Modelos", row=1, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    fig.update_yaxes(title_text="R² Score", row=1, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    fig.update_xaxes(title_text="Erro Absoluto", row=1, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    fig.update_yaxes(title_text="Frequência", row=1, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
+    
+    # Atualizar títulos dos subplots
+    fig.update_annotations(font=dict(color='white', size=12))
     
     return fig
 
@@ -785,17 +813,17 @@ else:
         col2.success(f"🎯 Menor RMSE: **{melhor_rmse}** ({metrics[melhor_rmse]['rmse']:.2f})")
         col3.success(f"📏 Menor MAE: **{melhor_mae}** ({metrics[melhor_mae]['mae']:.2f})")
 
-        # GRÁFICO PRINCIPAL INTERATIVO MELHORADO COM FUNDO TRANSPARENTE
+        # GRÁFICO PRINCIPAL INTERATIVO COM LEGENDAS CORRIGIDAS
         st.subheader("🎨 Gráfico de Comparação Interativo")
-        fig_comparison = create_interactive_comparison_chart_transparent(metrics)
+        fig_comparison = create_interactive_comparison_chart_corrected(metrics)
         st.plotly_chart(fig_comparison, use_container_width=True)
 
-        # DASHBOARD COMPLETO COM FUNDO TRANSPARENTE
+        # DASHBOARD COMPLETO COM LEGENDAS CORRIGIDAS
         st.subheader("📋 Dashboard Completo de Análise")
-        fig_dashboard = create_dashboard_comparison_transparent(metrics, y_test)
+        fig_dashboard = create_dashboard_comparison_corrected(metrics, y_test)
         st.plotly_chart(fig_dashboard, use_container_width=True)
 
-        # Gráficos individuais melhorados com fundo transparente
+        # Gráficos individuais melhorados
         col1, col2 = st.columns(2)
         
         with col1:
@@ -818,7 +846,7 @@ else:
                     line=dict(dash='dash', color='red')
                 )
             )
-            fig_knn.update_layout(**get_plotly_style_transparent())
+            fig_knn.update_layout(**get_plotly_style_corrected())
             st.plotly_chart(fig_knn, use_container_width=True)
 
         with col2:
@@ -841,7 +869,7 @@ else:
                     line=dict(dash='dash', color='red')
                 )
             )
-            fig_rf.update_layout(**get_plotly_style_transparent())
+            fig_rf.update_layout(**get_plotly_style_corrected())
             st.plotly_chart(fig_rf, use_container_width=True)
 
         # Interpretação dos resultados
