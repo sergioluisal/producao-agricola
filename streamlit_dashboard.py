@@ -484,68 +484,368 @@ st.plotly_chart(fig_rf, use_container_width=True)
 # 🤖 Machine Learning: Comparação KNN vs RF
 # ----------------------------
 
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 
-st.subheader("📊 Comparativo Horizontal entre Modelos")
+# Bibliotecas de Machine Learning
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import StandardScaler
 
-# Estilo escuro e premium
-plt.style.use('dark_background')
-sns.set_context("talk", font_scale=1.1)
+# Configurar matplotlib para suporte a fontes CJK
+plt.rcParams['font.family'] = ['DejaVu Sans', 'SimHei', 'Noto Sans CJK JP', 'Arial Unicode MS']
+plt.rcParams['axes.unicode_minus'] = False
 
-# Dados
-metricas = ['📈 R²', '📉 RMSE', '📏 MAE']
-knn_scores = [r2, rmse, mae]
-rf_scores = [r2_rf, rmse_rf, mae_rf]
+# Esquema de cores especificado
+CORES = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343', '#FBE842', '#FF9A2E', '#A9AEB8']
 
-y = np.arange(len(metricas))
-height = 0.30  # menor espaçamento
+def criar_dados_produtividade():
+    """Cria dados simulados de produtividade agrícola"""
+    np.random.seed(42)
+    n_samples = 1000
+    
+    # Variáveis independentes (features)
+    temperatura = np.random.normal(25, 5, n_samples)  # Temperatura média (°C)
+    precipitacao = np.random.normal(800, 200, n_samples)  # Precipitação (mm)
+    ph_solo = np.random.normal(6.5, 0.8, n_samples)  # pH do solo
+    fertilizante = np.random.normal(150, 50, n_samples)  # Quantidade de fertilizante (kg/ha)
+    
+    # Variável dependente (target) - Produtividade
+    # Fórmula simulada baseada nas variáveis independentes
+    produtividade = (
+        0.3 * temperatura + 
+        0.002 * precipitacao + 
+        2.0 * ph_solo + 
+        0.01 * fertilizante + 
+        np.random.normal(0, 2, n_samples)  # Ruído
+    )
+    
+    # Garantir valores positivos e realistas
+    produtividade = np.clip(produtividade, 1, 15)
+    
+    # Criar DataFrame
+    df = pd.DataFrame({
+        'temperatura': temperatura,
+        'precipitacao': precipitacao,
+        'ph_solo': ph_solo,
+        'fertilizante': fertilizante,
+        'produtividade': produtividade
+    })
+    
+    return df
 
-# Figura mais compacta e com fundo transparente
-fig, ax = plt.subplots(figsize=(6.5, 3.8), facecolor='none')
-fig.patch.set_alpha(0)
-ax.set_facecolor('none')
+def treinar_modelos(df):
+    """Treina os modelos KNN e Random Forest"""
+    # Preparar dados
+    X = df[['temperatura', 'precipitacao', 'ph_solo', 'fertilizante']]
+    y = df['produtividade']
+    
+    # Dividir dados
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Normalizar dados para KNN
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    # Treinar KNN
+    knn = KNeighborsRegressor(n_neighbors=5)
+    knn.fit(X_train_scaled, y_train)
+    y_pred_knn = knn.predict(X_test_scaled)
+    
+    # Treinar Random Forest
+    rf = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf.fit(X_train, y_train)
+    y_pred_rf = rf.predict(X_test)
+    
+    # Calcular métricas
+    metricas = {
+        'KNN': {
+            'r2': r2_score(y_test, y_pred_knn),
+            'rmse': np.sqrt(mean_squared_error(y_test, y_pred_knn)),
+            'mae': mean_absolute_error(y_test, y_pred_knn),
+            'y_pred': y_pred_knn
+        },
+        'Random Forest': {
+            'r2': r2_score(y_test, y_pred_rf),
+            'rmse': np.sqrt(mean_squared_error(y_test, y_pred_rf)),
+            'mae': mean_absolute_error(y_test, y_pred_rf),
+            'y_pred': y_pred_rf
+        }
+    }
+    
+    return metricas, y_test
 
-# Barras estilizadas
-bars_knn = ax.barh(y - height/2, knn_scores, height, label='KNN', color='#00E676', edgecolor='none')
-bars_rf = ax.barh(y + height/2, rf_scores, height, label='Random Forest', color='#2979FF', edgecolor='none')
+def configurar_estilo_plotly():
+    """Configura o estilo visual para gráficos Plotly"""
+    return {
+        'plot_bgcolor': 'white',
+        'paper_bgcolor': 'white',
+        'font': {'family': 'Arial, sans-serif', 'size': 12, 'color': '#333333'},
+        'xaxis': {
+            'showgrid': True,
+            'gridwidth': 1,
+            'gridcolor': '#E0E0E0',
+            'griddash': 'dash',
+            'showline': True,
+            'linewidth': 1,
+            'linecolor': '#CCCCCC'
+        },
+        'yaxis': {
+            'showgrid': True,
+            'gridwidth': 1,
+            'gridcolor': '#E0E0E0',
+            'griddash': 'dash',
+            'showline': True,
+            'linewidth': 1,
+            'linecolor': '#CCCCCC'
+        }
+    }
 
-# Labels nas barras com visual moderno
-def autolabel(bars):
-    for bar in bars:
-        width = bar.get_width()
-        ax.annotate(f'{width:.2f}',
-                    xy=(width + 0.02, bar.get_y() + bar.get_height() / 2),
-                    ha='left', va='center',
-                    fontsize=10, fontweight='bold',
-                    color='white', family='DejaVu Sans')
+def criar_grafico_comparacao_geral(metricas):
+    """Cria gráfico de barras agrupadas para comparação geral"""
+    modelos = list(metricas.keys())
+    r2_scores = [metricas[modelo]['r2'] for modelo in modelos]
+    rmse_scores = [metricas[modelo]['rmse'] for modelo in modelos]
+    mae_scores = [metricas[modelo]['mae'] for modelo in modelos]
+    
+    fig = go.Figure()
+    
+    # Adicionar barras para cada métrica
+    fig.add_trace(go.Bar(
+        name='R²',
+        x=modelos,
+        y=r2_scores,
+        marker_color=CORES[0],
+        text=[f'{score:.3f}' for score in r2_scores],
+        textposition='auto',
+        hovertemplate='<b>%{x}</b><br>R²: %{y:.3f}<extra></extra>'
+    ))
+    
+    fig.add_trace(go.Bar(
+        name='RMSE',
+        x=modelos,
+        y=rmse_scores,
+        marker_color=CORES[1],
+        text=[f'{score:.2f}' for score in rmse_scores],
+        textposition='auto',
+        hovertemplate='<b>%{x}</b><br>RMSE: %{y:.2f} ton/ha<extra></extra>'
+    ))
+    
+    fig.add_trace(go.Bar(
+        name='MAE',
+        x=modelos,
+        y=mae_scores,
+        marker_color=CORES[2],
+        text=[f'{score:.2f}' for score in mae_scores],
+        textposition='auto',
+        hovertemplate='<b>%{x}</b><br>MAE: %{y:.2f} ton/ha<extra></extra>'
+    ))
+    
+    fig.update_layout(
+        title={
+            'text': 'Comparação de Desempenho: KNN vs Random Forest',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 18, 'color': '#333333'}
+        },
+        xaxis_title='Modelos',
+        yaxis_title='Valores das Métricas',
+        barmode='group',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        **configurar_estilo_plotly()
+    )
+    
+    return fig
 
-autolabel(bars_knn)
-autolabel(bars_rf)
+def criar_graficos_individuais(metricas):
+    """Cria gráficos individuais para cada métrica"""
+    modelos = list(metricas.keys())
+    
+    # Gráfico R²
+    fig_r2 = go.Figure(data=[
+        go.Bar(
+            x=modelos,
+            y=[metricas[modelo]['r2'] for modelo in modelos],
+            marker_color=[CORES[0], CORES[3]],
+            text=[f'{metricas[modelo]["r2"]:.3f}' for modelo in modelos],
+            textposition='auto',
+            hovertemplate='<b>%{x}</b><br>R²: %{y:.3f}<extra></extra>'
+        )
+    ])
+    
+    fig_r2.update_layout(
+        title={
+            'text': 'Coeficiente de Determinação (R²)',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 16, 'color': '#333333'}
+        },
+        xaxis_title='Modelos',
+        yaxis_title='R² Score',
+        **configurar_estilo_plotly()
+    )
+    
+    # Gráfico RMSE
+    fig_rmse = go.Figure(data=[
+        go.Bar(
+            x=modelos,
+            y=[metricas[modelo]['rmse'] for modelo in modelos],
+            marker_color=[CORES[1], CORES[4]],
+            text=[f'{metricas[modelo]["rmse"]:.2f}' for modelo in modelos],
+            textposition='auto',
+            hovertemplate='<b>%{x}</b><br>RMSE: %{y:.2f} ton/ha<extra></extra>'
+        )
+    ])
+    
+    fig_rmse.update_layout(
+        title={
+            'text': 'Erro Quadrático Médio (RMSE)',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 16, 'color': '#333333'}
+        },
+        xaxis_title='Modelos',
+        yaxis_title='RMSE (ton/ha)',
+        **configurar_estilo_plotly()
+    )
+    
+    # Gráfico MAE
+    fig_mae = go.Figure(data=[
+        go.Bar(
+            x=modelos,
+            y=[metricas[modelo]['mae'] for modelo in modelos],
+            marker_color=[CORES[2], CORES[5]],
+            text=[f'{metricas[modelo]["mae"]:.2f}' for modelo in modelos],
+            textposition='auto',
+            hovertemplate='<b>%{x}</b><br>MAE: %{y:.2f} ton/ha<extra></extra>'
+        )
+    ])
+    
+    fig_mae.update_layout(
+        title={
+            'text': 'Erro Absoluto Médio (MAE)',
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 16, 'color': '#333333'}
+        },
+        xaxis_title='Modelos',
+        yaxis_title='MAE (ton/ha)',
+        **configurar_estilo_plotly()
+    )
+    
+    return fig_r2, fig_rmse, fig_mae
 
-# Eixos e título com tipografia elegante
-ax.set_yticks(y)
-ax.set_yticklabels(metricas, fontsize=11, fontweight='bold', color='white', family='DejaVu Sans')
-ax.set_xlabel("Valor da Métrica", fontsize=11, fontweight='bold', color='white', family='DejaVu Sans')
-ax.set_title("📊 Desempenho dos Modelos: KNN vs Random Forest", fontsize=13, fontweight='bold', color='white', family='DejaVu Sans')
+def criar_grafico_matplotlib(metricas):
+    """Cria gráfico estático com matplotlib seguindo o código original"""
+    modelos = list(metricas.keys())
+    r2_scores = [metricas[modelo]['r2'] for modelo in modelos]
+    rmse_scores = [metricas[modelo]['rmse'] for modelo in modelos]
+    mae_scores = [metricas[modelo]['mae'] for modelo in modelos]
+    
+    x = np.arange(len(modelos))
+    width = 0.25
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Configurar estilo
+    ax.set_facecolor('white')
+    ax.grid(True, linestyle='--', alpha=0.7, color='#E0E0E0')
+    ax.set_axisbelow(True)
+    
+    # Criar barras
+    bars1 = ax.bar(x - width, r2_scores, width, label='R²', color=CORES[0], alpha=0.8)
+    bars2 = ax.bar(x, rmse_scores, width, label='RMSE', color=CORES[1], alpha=0.8)
+    bars3 = ax.bar(x + width, mae_scores, width, label='MAE', color=CORES[2], alpha=0.8)
+    
+    # Adicionar valores nas barras
+    for bars in [bars1, bars2, bars3]:
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                   f'{height:.2f}',
+                   ha='center', va='bottom', fontsize=10)
+    
+    ax.set_xlabel('Modelos', fontsize=12)
+    ax.set_ylabel('Valores das Métricas', fontsize=12)
+    ax.set_title('Desempenho dos Modelos - KNN vs Random Forest', fontsize=16, fontweight='bold', pad=20)
+    ax.set_xticks(x)
+    ax.set_xticklabels(modelos)
+    ax.legend()
+    
+    plt.tight_layout()
+    plt.savefig('/home/ubuntu/comparacao_modelos_matplotlib.png', dpi=300, bbox_inches='tight', facecolor='white')
+    plt.close()
 
-# Limpa grid e bordas
-ax.tick_params(axis='x', colors='white')
-ax.tick_params(axis='y', colors='white')
-ax.grid(False)
-for spine in ax.spines.values():
-    spine.set_visible(False)
+def main():
+    """Função principal"""
+    print("🚀 Iniciando análise de modelos de Machine Learning...")
+    
+    # Criar dados
+    print("📊 Criando dados de produtividade agrícola...")
+    df = criar_dados_produtividade()
+    
+    # Treinar modelos
+    print("🤖 Treinando modelos KNN e Random Forest...")
+    metricas, y_test = treinar_modelos(df)
+    
+    # Exibir resultados
+    print("\n📈 Resultados dos Modelos:")
+    for modelo, resultado in metricas.items():
+        print(f"\n{modelo}:")
+        print(f"  R²: {resultado['r2']:.3f}")
+        print(f"  RMSE: {resultado['rmse']:.2f} ton/ha")
+        print(f"  MAE: {resultado['mae']:.2f} ton/ha")
+    
+    # Criar gráficos
+    print("\n🎨 Criando gráficos de comparação...")
+    
+    # Gráfico de comparação geral
+    fig_comparacao = criar_grafico_comparacao_geral(metricas)
+    fig_comparacao.write_html("/home/ubuntu/comparacao_geral.html")
+    fig_comparacao.write_image("/home/ubuntu/comparacao_geral.png", width=1000, height=600)
+    
+    # Gráficos individuais
+    fig_r2, fig_rmse, fig_mae = criar_graficos_individuais(metricas)
+    
+    fig_r2.write_html("/home/ubuntu/grafico_r2.html")
+    fig_r2.write_image("/home/ubuntu/grafico_r2.png", width=800, height=500)
+    
+    fig_rmse.write_html("/home/ubuntu/grafico_rmse.html")
+    fig_rmse.write_image("/home/ubuntu/grafico_rmse.png", width=800, height=500)
+    
+    fig_mae.write_html("/home/ubuntu/grafico_mae.html")
+    fig_mae.write_image("/home/ubuntu/grafico_mae.png", width=800, height=500)
+    
+    # Gráfico matplotlib
+    criar_grafico_matplotlib(metricas)
+    
+    print("\n✅ Todos os gráficos foram criados com sucesso!")
+    print("\n📁 Arquivos gerados:")
+    print("  • comparacao_geral.html (interativo)")
+    print("  • comparacao_geral.png")
+    print("  • grafico_r2.html (interativo)")
+    print("  • grafico_r2.png")
+    print("  • grafico_rmse.html (interativo)")
+    print("  • grafico_rmse.png")
+    print("  • grafico_mae.html (interativo)")
+    print("  • grafico_mae.png")
+    print("  • comparacao_modelos_matplotlib.png")
 
-# Legenda premium
-legend = ax.legend(loc='lower right', frameon=False)
-for text in legend.get_texts():
-    text.set_color("white")
-    text.set_fontweight("bold")
-    text.set_fontfamily("DejaVu Sans")
-
-# Exibir no Streamlit
-st.pyplot(fig)
+if __name__ == "__main__":
+    main()
 
 st.markdown(
     """
