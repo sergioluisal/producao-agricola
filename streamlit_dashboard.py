@@ -479,97 +479,109 @@ def create_interactive_comparison_chart_transparent(metrics):
     ))
     
     # Adicionar anotações para melhor modelo
-    annotations = []
-    
-    # Determinar melhor modelo para cada métrica
-    melhor_r2_idx = np.argmax(r2_scores)
-    melhor_rmse_idx = np.argmin(rmse_scores)
-    
-    # Anotação para melhor R²
-    annotations.append(dict(
-        x=modelos[melhor_r2_idx],
-        y=r2_scores[melhor_r2_idx] + max(r2_scores) * 0.1,
-        text="🏆 Melhor R²",
-        showarrow=True,
-        arrowhead=2,
-        arrowcolor=colors[0],
-        font=dict(color=colors[0], size=10)
-    ))
-    
-    # Anotação para melhor RMSE
-    annotations.append(dict(
-        x=modelos[melhor_rmse_idx],
-        y=rmse_scores[melhor_rmse_idx] + max(rmse_scores) * 0.1,
-        text="🎯 Menor RMSE",
-        showarrow=True,
-        arrowhead=2,
-        arrowcolor=colors[1],
-        font=dict(color=colors[1], size=10)
-    ))
-    
-    fig.update_layout(
-        title={
-            'text': '🤖 Comparação Interativa: KNN vs Random Forest<br>' +
-                   '<sub>Análise de Desempenho para Predição de Produtividade Agrícola</sub>',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 20, 'color': '#333333'}
-        },
-        xaxis_title='Modelos de Machine Learning',
-        yaxis_title='Valores das Métricas',
-        barmode='group',
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="center",
-            x=0.5,
-            font=dict(size=12)
+annotations = []
+
+# Determinar melhor modelo para cada métrica
+melhor_r2_idx = np.argmax(r2_scores)
+melhor_rmse_idx = np.argmin(rmse_scores)
+
+# Anotação para melhor R²
+annotations.append(dict(
+    x=modelos[melhor_r2_idx],
+    y=r2_scores[melhor_r2_idx] + max(r2_scores) * 0.1,
+    text="🏆 Melhor R²",
+    showarrow=True,
+    arrowhead=2,
+    arrowcolor=colors[0],
+    font=dict(color=colors[0], size=10)
+))
+
+# Anotação para melhor RMSE
+annotations.append(dict(
+    x=modelos[melhor_rmse_idx],
+    y=rmse_scores[melhor_rmse_idx] + max(rmse_scores) * 0.1,
+    text="🎯 Menor RMSE",
+    showarrow=True,
+    arrowhead=2,
+    arrowcolor=colors[1],
+    font=dict(color=colors[1], size=10)
+))
+
+# Layout principal do gráfico
+fig.update_layout(
+    title={
+        'text': '🤖 Comparação Interativa: KNN vs Random Forest<br>' +
+                '<sub>Análise de Desempenho para Predição de Produtividade Agrícola</sub>',
+        'x': 0.5,
+        'xanchor': 'center',
+        'font': {'size': 20, 'color': '#FFFFFF'}  # Ajuste conforme tema
+    },
+    xaxis_title='Modelos de Machine Learning',
+    yaxis_title='Valores das Métricas',
+    barmode='group',
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="center",
+        x=0.5,
+        font=dict(size=12)
+    ),
+    height=650,
+    annotations=annotations,
+    **get_plotly_style_transparent()
+)
+
+# Anotação explicando as métricas
+fig.add_annotation(
+    text="📘 <b>R²</b>: Coef. Determinação &nbsp;&nbsp;&nbsp; 🔵 <b>RMSE</b>: Erro Quadrático Médio &nbsp;&nbsp;&nbsp; 🟢 <b>MAE</b>: Erro Absoluto Médio",
+    xref="paper", yref="paper",
+    x=0, y=1.12,
+    showarrow=False,
+    align="left",
+    font=dict(size=12, color="white"),  # ou "#CCCCCC"
+    bgcolor="rgba(0,0,0,0)"
+)
+
+# Botões para alternar visibilidade das métricas
+fig.update_layout(
+    updatemenus=[
+        dict(
+            type="buttons",
+            direction="left",
+            buttons=[
+                dict(
+                    args=[{"visible": [True, True, True]}],
+                    label="Todas as Métricas",
+                    method="restyle"
+                ),
+                dict(
+                    args=[{"visible": [True, False, False]}],
+                    label="Apenas R²",
+                    method="restyle"
+                ),
+                dict(
+                    args=[{"visible": [False, True, False]}],
+                    label="Apenas RMSE",
+                    method="restyle"
+                ),
+                dict(
+                    args=[{"visible": [False, False, True]}],
+                    label="Apenas MAE",
+                    method="restyle"
+                ),
+            ],
+            pad={"r": 10, "t": 10},
+            showactive=True,
+            x=0.01,
+            xanchor="left",
+            y=1.08,  # Ajustado para não sobrepor
+            yanchor="top"
         ),
-        height=600,
-        annotations=annotations,
-        **get_plotly_style_transparent()
-    )
-    
-    # Adicionar botões para filtrar métricas
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                type="buttons",
-                direction="left",
-                buttons=list([
-                    dict(
-                        args=[{"visible": [True, True, True]}],
-                        label="Todas as Métricas",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [True, False, False]}],
-                        label="Apenas R²",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [False, True, False]}],
-                        label="Apenas RMSE",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [False, False, True]}],
-                        label="Apenas MAE",
-                        method="restyle"
-                    ),
-                ]),
-                pad={"r": 10, "t": 10},
-                showactive=True,
-                x=0.01,
-                xanchor="left",
-                y=1.15,
-                yanchor="top"
-            ),
-        ]
-    )
-    
-    return fig
+    ]
+)
+
+return fig
 
 def create_dashboard_comparison_transparent(metrics, y_test):
     """Cria dashboard completo com múltiplos gráficos com fundo transparente"""
