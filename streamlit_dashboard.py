@@ -218,7 +218,11 @@ if not filtered_df.empty:
             color="Yield_tons_per_hectare",
             color_continuous_scale="Greens"
         )
-        fig_crop.update_layout(showlegend=False)
+        fig_crop.update_layout(
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig_crop, use_container_width=True)
 
     with col2:
@@ -235,7 +239,11 @@ if not filtered_df.empty:
             color="Yield_tons_per_hectare",
             color_continuous_scale="Blues"
         )
-        fig_region.update_layout(showlegend=False)
+        fig_region.update_layout(
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig_region, use_container_width=True)
 
     col3, col4 = st.columns(2)
@@ -254,7 +262,11 @@ if not filtered_df.empty:
             color="Yield_tons_per_hectare",
             color_continuous_scale="Oranges"
         )
-        fig_soil.update_layout(showlegend=False)
+        fig_soil.update_layout(
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         fig_soil.update_xaxes(tickangle=45)
         st.plotly_chart(fig_soil, use_container_width=True)
 
@@ -281,6 +293,10 @@ if not filtered_df.empty:
             line=dict(color="red", dash="dash")
         ))
 
+        fig_scatter.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
     st.subheader("📊 Distribuição de Produtividade")
@@ -292,7 +308,11 @@ if not filtered_df.empty:
         labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "count": "Frequência"},
         color_discrete_sequence=["#4CAF50"]
     )
-    fig_hist.update_layout(showlegend=False)
+    fig_hist.update_layout(
+        showlegend=False,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
     st.plotly_chart(fig_hist, use_container_width=True)
 
     with st.expander("📋 Ver Dados Filtrados"):
@@ -316,36 +336,21 @@ if not filtered_df.empty:
     best_row = filtered_df.loc[filtered_df["Yield_tons_per_hectare"].idxmax()]
 
     st.markdown(f"""
-    <style>
-    .best-result {{
-        background-color: var(--background-color-secondary);
-        color: var(--text-color);
-        padding: 1.5rem;
-        border-radius: 10px;
-        border-left: 6px solid var(--primary-color);
-        margin-top: 1rem;
-        font-size: 1.05rem;
-    }}
-    .best-result h3 {{
-        color: var(--primary-color);
-    }}
-   </style>
-
-   <div class="best-result">
-    <h3>🌟 A melhor colheita registrada com os filtros atuais foi:</h3>
-    <ul>
-        <li><strong>Região:</strong> {best_row['Region']}</li>
-        <li><strong>Cultura:</strong> {best_row['Crop']}</li>
-        <li><strong>Tipo de Solo:</strong> {best_row['Soil_Type']}</li>
-        <li><strong>Condição Climática:</strong> {best_row['Weather_Condition']}</li>
-        <li><strong>Uso de Fertilizante:</strong> {"Sim" if best_row["Fertilizer_Used"] else "Não"}</li>
-        <li><strong>Uso de Irrigação:</strong> {"Sim" if best_row["Irrigation_Used"] else "Não"}</li>
-        <li><strong>Chuva:</strong> {best_row["Rainfall_mm"]:.2f} mm</li>
-        <li><strong>Temperatura:</strong> {best_row["Temperature_Celsius"]:.2f} °C</li>
-        <li><strong>🌾 Produtividade:</strong> <strong>{best_row["Yield_tons_per_hectare"]:.2f} ton/ha</strong></li>
-    </ul>
-   </div>
-  """, unsafe_allow_html=True)
+    <div style="background-color: #f0f2f6; color: #333; padding: 1.5rem; border-radius: 10px; border-left: 6px solid #4CAF50; margin-top: 1rem; font-size: 1.05rem;">
+        <h3 style="color: #4CAF50;">🌟 A melhor colheita registrada com os filtros atuais foi:</h3>
+        <ul>
+            <li><strong>Região:</strong> {best_row['Region']}</li>
+            <li><strong>Cultura:</strong> {best_row['Crop']}</li>
+            <li><strong>Tipo de Solo:</strong> {best_row['Soil_Type']}</li>
+            <li><strong>Condição Climática:</strong> {best_row['Weather_Condition']}</li>
+            <li><strong>Uso de Fertilizante:</strong> {"Sim" if best_row["Fertilizer_Used"] else "Não"}</li>
+            <li><strong>Uso de Irrigação:</strong> {"Sim" if best_row["Irrigation_Used"] else "Não"}</li>
+            <li><strong>Chuva:</strong> {best_row["Rainfall_mm"]:.2f} mm</li>
+            <li><strong>Temperatura:</strong> {best_row["Temperature_Celsius"]:.2f} °C</li>
+            <li><strong>🌾 Produtividade:</strong> <strong>{best_row["Yield_tons_per_hectare"]:.2f} ton/ha</strong></li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 else:
     st.info("ℹ️ Nenhuma colheita disponível com os filtros atuais.")
     
@@ -384,15 +389,15 @@ else:
 st.markdown("---")
 
 # ----------------------------
-# 🤖 SEÇÃO DE MACHINE LEARNING MELHORADA
+# 🤖 SEÇÃO DE MACHINE LEARNING MELHORADA COM FUNDO TRANSPARENTE
 # ----------------------------
 
-# Funções auxiliares para gráficos interativos
-def get_plotly_style():
-    """Configura o estilo visual para gráficos Plotly"""
+# Funções auxiliares para gráficos interativos com fundo transparente
+def get_plotly_style_transparent():
+    """Configura o estilo visual para gráficos Plotly com fundo transparente"""
     return {
-        'plot_bgcolor': 'white',
-        'paper_bgcolor': 'white',
+        'plot_bgcolor': 'rgba(0,0,0,0)',  # Fundo transparente
+        'paper_bgcolor': 'rgba(0,0,0,0)',  # Fundo do papel transparente
         'font': {'family': 'Arial, sans-serif', 'size': 12, 'color': '#333333'},
         'xaxis': {
             'showgrid': True,
@@ -414,8 +419,8 @@ def get_plotly_style():
         }
     }
 
-def create_interactive_comparison_chart(metrics):
-    """Cria gráfico de comparação interativo melhorado"""
+def create_interactive_comparison_chart_transparent(metrics):
+    """Cria gráfico de comparação interativo melhorado com fundo transparente"""
     # Esquema de cores especificado
     colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343', '#FBE842', '#FF9A2E', '#A9AEB8']
     
@@ -523,7 +528,7 @@ def create_interactive_comparison_chart(metrics):
         ),
         height=600,
         annotations=annotations,
-        **get_plotly_style()
+        **get_plotly_style_transparent()
     )
     
     # Adicionar botões para filtrar métricas
@@ -566,8 +571,8 @@ def create_interactive_comparison_chart(metrics):
     
     return fig
 
-def create_dashboard_comparison(metrics, y_test):
-    """Cria dashboard completo com múltiplos gráficos"""
+def create_dashboard_comparison_transparent(metrics, y_test):
+    """Cria dashboard completo com múltiplos gráficos com fundo transparente"""
     colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343']
     
     fig = make_subplots(
@@ -659,7 +664,7 @@ def create_dashboard_comparison(metrics, y_test):
             'font': {'size': 18, 'color': '#333333'}
         },
         height=800,
-        **get_plotly_style()
+        **get_plotly_style_transparent()
     )
     
     # Atualizar eixos
@@ -780,17 +785,17 @@ else:
         col2.success(f"🎯 Menor RMSE: **{melhor_rmse}** ({metrics[melhor_rmse]['rmse']:.2f})")
         col3.success(f"📏 Menor MAE: **{melhor_mae}** ({metrics[melhor_mae]['mae']:.2f})")
 
-        # GRÁFICO PRINCIPAL INTERATIVO MELHORADO
+        # GRÁFICO PRINCIPAL INTERATIVO MELHORADO COM FUNDO TRANSPARENTE
         st.subheader("🎨 Gráfico de Comparação Interativo")
-        fig_comparison = create_interactive_comparison_chart(metrics)
+        fig_comparison = create_interactive_comparison_chart_transparent(metrics)
         st.plotly_chart(fig_comparison, use_container_width=True)
 
-        # DASHBOARD COMPLETO
+        # DASHBOARD COMPLETO COM FUNDO TRANSPARENTE
         st.subheader("📋 Dashboard Completo de Análise")
-        fig_dashboard = create_dashboard_comparison(metrics, y_test)
+        fig_dashboard = create_dashboard_comparison_transparent(metrics, y_test)
         st.plotly_chart(fig_dashboard, use_container_width=True)
 
-        # Gráficos individuais melhorados
+        # Gráficos individuais melhorados com fundo transparente
         col1, col2 = st.columns(2)
         
         with col1:
@@ -813,7 +818,7 @@ else:
                     line=dict(dash='dash', color='red')
                 )
             )
-            fig_knn.update_layout(**get_plotly_style())
+            fig_knn.update_layout(**get_plotly_style_transparent())
             st.plotly_chart(fig_knn, use_container_width=True)
 
         with col2:
@@ -836,7 +841,7 @@ else:
                     line=dict(dash='dash', color='red')
                 )
             )
-            fig_rf.update_layout(**get_plotly_style())
+            fig_rf.update_layout(**get_plotly_style_transparent())
             st.plotly_chart(fig_rf, use_container_width=True)
 
         # Interpretação dos resultados
@@ -891,6 +896,7 @@ else:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Footer
+st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666;'>
