@@ -4,6 +4,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 from plotly.subplots import make_subplots
+import traceback
+import sys
 
 # Configuração da página
 st.set_page_config(
@@ -13,72 +15,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Título do uploader
-st.markdown('<h1 class="main-header">🌾 Análise Agrícola</h1>', unsafe_allow_html=True)
-
-# Upload de arquivo
-uploaded_file = st.file_uploader("📂 Carregue seu arquivo de dados (CSV, XLSX)", type=["csv", "xls", "xlsx"])
-
-# Função para carregar dados
-@st.cache_data
-def load_data(uploaded_file):
-    if uploaded_file is None:
-        return pd.DataFrame()
-
-    try:
-        file_extension = uploaded_file.name.split(".")[-1].lower()
-        if file_extension == "csv":
-            encodings = ["utf-8", "latin-1", "iso-8859-1", "cp1252"]
-            df = None
-            for encoding in encodings:
-                try:
-                    df = pd.read_csv(uploaded_file, encoding=encoding, sep=None, engine='python')
-                    break
-                except Exception:
-                    uploaded_file.seek(0)
-                    continue
-            if df is None:
-                st.error("Não foi possível decodificar o arquivo CSV.")
-                return pd.DataFrame()
-        elif file_extension in ["xls", "xlsx"]:
-            df = pd.read_excel(uploaded_file)
-        else:
-            st.error("Formato de arquivo não suportado.")
-            return pd.DataFrame()
-        return df
-    except Exception as e:
-        st.error(f"Erro ao carregar os dados: {e}")
-        return pd.DataFrame()
-
-# Carregar dados
-df = load_data(uploaded_file)
-
-# Verifica se os dados foram carregados
-if df.empty:
-    st.warning("⚠️ Nenhum dado carregado. Por favor, envie um arquivo para análise.")
-    st.stop()
-
-# Renomear colunas para nomes padronizados (em inglês)
-col_renames = {
-    "Região": "Region",
-    "Tipo_de_Solo": "Soil_Type",
-    "Cultura": "Crop",
-    "Condição_Climática": "Weather_Condition",
-    "Fertilizante_Utilizado": "Fertilizer_Used",
-    "Irrigação_Utilizada": "Irrigation_Used",
-    "Produtividade_ton_ha": "Yield_tons_per_hectare",
-    "Chuva_mm": "Rainfall_mm",
-    "Temperatura_Celsius": "Temperature_Celsius"
-}
-df.rename(columns=col_renames, inplace=True)
-
-# Verifica se as colunas essenciais existem
-required_columns = ["Region", "Soil_Type", "Crop", "Weather_Condition"]
-missing_columns = [col for col in required_columns if col not in df.columns]
-
-if missing_columns:
-    st.error(f"Colunas ausentes no arquivo: {', '.join(missing_columns)}")
-    st.stop()
+# Função de debug
+def debug_info(message, data=None):
+    """Função para debug - pode ser desabilitada em produção"""
+    if st.sidebar.checkbox("🐛 Modo Debug", value=False):
+        st.sidebar.write(f"DEBUG: {message}")
+        if data is not None:
+            st.sidebar.write(data)
 
 # CSS personalizado
 st.markdown("""
@@ -113,46 +56,188 @@ st.markdown("""
         font-weight: bold;
         margin-bottom: 1rem;
     }
+    .error-container {
+        background-color: #ffebee;
+        color: #c62828;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #f44336;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Título do Dashboard
 st.markdown('<h1 class="main-header">🌾 Dashboard de Análise Agrícola</h1>', unsafe_allow_html=True)
 
+# Função para carregar dados com tratamento robusto de erros
+@st.cache_data
+def load_data_robust(uploaded_file):
+    """Carrega dados com tratamento robusto de erros"""
+    if uploaded_file is None:
+        return pd.DataFrame(), "Nenhum arquivo carregado"
+
+    try:
+        file_extension = uploaded_file.name.split(".")[-1].lower()
+        debug_info(f"Carregando arquivo: {uploaded_file.name}, extensão: {file_extension}")
+        
+        if file_extension == "csv":
+            encodings = ["utf-8", "latin-1", "iso-8859-1", "cp1252"]
+            df = None
+            encoding_used = None
+            
+            for encoding in encodings:
+                try:
+                    uploaded_file.seek(0)
+                    df = pd.read_csv(uploaded_file, encoding=encoding, sep=None, engine='python')
+                    encoding_used = encoding
+                    debug_info(f"Arquivo carregado com encoding: {encoding}")
+                    break
+                except Exception as e:
+                    debug_info(f"Falha com encoding {encoding}: {str(e)}")
+                    continue
+            
+            if df is None:
+                return pd.DataFrame(), "Não foi possível decodificar o arquivo CSV com nenhum encoding testado"
+                
+        elif file_extension in ["xls", "xlsx"]:
+            df = pd.read_excel(uploaded_file)
+            debug_info("Arquivo Excel carregado com sucesso")
+        else:
+            return pd.DataFrame(), f"Formato de arquivo não suportado: {file_extension}"
+        
+        # Verificações básicas do DataFrame
+        if df.empty:
+            return pd.DataFrame(), "Arquivo carregado está vazio"
+        
+        debug_info(f"DataFrame carregado: {df.shape[0]} linhas, {df.shape[1]} colunas")
+        debug_info("Colunas encontradas:", list(df.columns))
+        
+        return df, "Sucesso"
+        
+    except Exception as e:
+        error_msg = f"Erro ao carregar dados: {str(e)}"
+        debug_info(f"ERRO: {error_msg}")
+        debug_info("Traceback:", traceback.format_exc())
+        return pd.DataFrame(), error_msg
+
+# Upload de arquivo
+st.subheader("📂 Carregamento de Dados")
+uploaded_file = st.file_uploader("Carregue seu arquivo de dados (CSV, XLSX)", type=["csv", "xls", "xlsx"])
+
+# Carregar dados
+df, load_status = load_data_robust(uploaded_file)
+
+if load_status != "Sucesso":
+    st.error(f"❌ {load_status}")
+    if df.empty:
+        st.info("ℹ️ Por favor, carregue um arquivo válido para continuar.")
+        st.stop()
+
+# Verificar se dados foram carregados
+if df.empty:
+    st.warning("⚠️ Nenhum dado carregado. Por favor, envie um arquivo para análise.")
+    st.stop()
+
+# Mostrar informações básicas do dataset
+with st.expander("ℹ️ Informações do Dataset"):
+    col1, col2, col3 = st.columns(3)
+    col1.metric("📊 Linhas", df.shape[0])
+    col2.metric("📋 Colunas", df.shape[1])
+    col3.metric("💾 Tamanho", f"{df.memory_usage(deep=True).sum() / 1024:.1f} KB")
+    
+    st.write("**Colunas disponíveis:**")
+    st.write(list(df.columns))
+    
+    st.write("**Primeiras 5 linhas:**")
+    st.dataframe(df.head())
+
+# Renomear colunas para nomes padronizados
+try:
+    col_renames = {
+        "Região": "Region",
+        "Tipo_de_Solo": "Soil_Type", 
+        "Cultura": "Crop",
+        "Condição_Climática": "Weather_Condition",
+        "Fertilizante_Utilizado": "Fertilizer_Used",
+        "Irrigação_Utilizada": "Irrigation_Used",
+        "Produtividade_ton_ha": "Yield_tons_per_hectare",
+        "Chuva_mm": "Rainfall_mm",
+        "Temperatura_Celsius": "Temperature_Celsius"
+    }
+    
+    # Renomear apenas colunas que existem
+    existing_renames = {k: v for k, v in col_renames.items() if k in df.columns}
+    df.rename(columns=existing_renames, inplace=True)
+    debug_info(f"Colunas renomeadas: {existing_renames}")
+    
+except Exception as e:
+    st.error(f"Erro ao renomear colunas: {str(e)}")
+
+# Verificar colunas essenciais
+required_columns = ["Region", "Soil_Type", "Crop", "Weather_Condition"]
+available_columns = [col for col in required_columns if col in df.columns]
+missing_columns = [col for col in required_columns if col not in df.columns]
+
+debug_info(f"Colunas disponíveis: {available_columns}")
+debug_info(f"Colunas faltando: {missing_columns}")
+
+if missing_columns:
+    st.warning(f"⚠️ Algumas colunas essenciais estão ausentes: {', '.join(missing_columns)}")
+    st.info("💡 O dashboard funcionará com as colunas disponíveis, mas algumas funcionalidades podem ser limitadas.")
+
 # Sidebar para filtros
 st.sidebar.markdown('<div class="filter-header">🔍 Filtros</div>', unsafe_allow_html=True)
 
-# Filtros
-selected_region = st.sidebar.selectbox("Região", ["Todas as Regiões"] + sorted(df["Region"].dropna().unique().tolist()))
-selected_soil_type = st.sidebar.selectbox("Tipo de Solo", ["Todos os Tipos"] + sorted(df["Soil_Type"].dropna().unique().tolist()))
-selected_crop = st.sidebar.selectbox("Cultura", ["Todas as Culturas"] + sorted(df["Crop"].dropna().unique().tolist()))
-selected_weather_condition = st.sidebar.selectbox("Condição Climática", ["Todas as Condições"] + sorted(df["Weather_Condition"].dropna().unique().tolist()))
-selected_fertilizer_used = st.sidebar.selectbox("Uso de Fertilizante", ["Todos", "Sim", "Não"])
-selected_irrigation_used = st.sidebar.selectbox("Uso de Irrigação", ["Todos", "Sim", "Não"])
+# Aplicar filtros apenas para colunas que existem
+filtered_df = df.copy()
+
+try:
+    if "Region" in df.columns:
+        regions = ["Todas as Regiões"] + sorted(df["Region"].dropna().unique().tolist())
+        selected_region = st.sidebar.selectbox("Região", regions)
+        if selected_region != "Todas as Regiões":
+            filtered_df = filtered_df[filtered_df["Region"] == selected_region]
+
+    if "Soil_Type" in df.columns:
+        soil_types = ["Todos os Tipos"] + sorted(df["Soil_Type"].dropna().unique().tolist())
+        selected_soil_type = st.sidebar.selectbox("Tipo de Solo", soil_types)
+        if selected_soil_type != "Todos os Tipos":
+            filtered_df = filtered_df[filtered_df["Soil_Type"] == selected_soil_type]
+
+    if "Crop" in df.columns:
+        crops = ["Todas as Culturas"] + sorted(df["Crop"].dropna().unique().tolist())
+        selected_crop = st.sidebar.selectbox("Cultura", crops)
+        if selected_crop != "Todas as Culturas":
+            filtered_df = filtered_df[filtered_df["Crop"] == selected_crop]
+
+    if "Weather_Condition" in df.columns:
+        weather_conditions = ["Todas as Condições"] + sorted(df["Weather_Condition"].dropna().unique().tolist())
+        selected_weather_condition = st.sidebar.selectbox("Condição Climática", weather_conditions)
+        if selected_weather_condition != "Todas as Condições":
+            filtered_df = filtered_df[filtered_df["Weather_Condition"] == selected_weather_condition]
+
+    if "Fertilizer_Used" in df.columns:
+        selected_fertilizer_used = st.sidebar.selectbox("Uso de Fertilizante", ["Todos", "Sim", "Não"])
+        if selected_fertilizer_used == "Sim":
+            filtered_df = filtered_df[filtered_df["Fertilizer_Used"] == True]
+        elif selected_fertilizer_used == "Não":
+            filtered_df = filtered_df[filtered_df["Fertilizer_Used"] == False]
+
+    if "Irrigation_Used" in df.columns:
+        selected_irrigation_used = st.sidebar.selectbox("Uso de Irrigação", ["Todos", "Sim", "Não"])
+        if selected_irrigation_used == "Sim":
+            filtered_df = filtered_df[filtered_df["Irrigation_Used"] == True]
+        elif selected_irrigation_used == "Não":
+            filtered_df = filtered_df[filtered_df["Irrigation_Used"] == False]
+
+except Exception as e:
+    st.error(f"Erro ao aplicar filtros: {str(e)}")
+    filtered_df = df.copy()
 
 # Botão para limpar filtros
 if st.sidebar.button("🗑️ Limpar Filtros"):
     st.rerun()
-
-# Aplicar filtros
-filtered_df = df.copy()
-
-if selected_region != "Todas as Regiões":
-    filtered_df = filtered_df[filtered_df["Region"] == selected_region]
-if selected_soil_type != "Todos os Tipos":
-    filtered_df = filtered_df[filtered_df["Soil_Type"] == selected_soil_type]
-if selected_crop != "Todas as Culturas":
-    filtered_df = filtered_df[filtered_df["Crop"] == selected_crop]
-if selected_weather_condition != "Todas as Condições":
-    filtered_df = filtered_df[filtered_df["Weather_Condition"] == selected_weather_condition]
-if selected_fertilizer_used == "Sim":
-    filtered_df = filtered_df[filtered_df["Fertilizer_Used"] == True]
-elif selected_fertilizer_used == "Não":
-    filtered_df = filtered_df[filtered_df["Fertilizer_Used"] == False]
-if selected_irrigation_used == "Sim":
-    filtered_df = filtered_df[filtered_df["Irrigation_Used"] == True]
-elif selected_irrigation_used == "Não":
-    filtered_df = filtered_df[filtered_df["Irrigation_Used"] == False]
 
 # Exibir número total de registros
 st.sidebar.markdown("---")
@@ -163,38 +248,51 @@ st.sidebar.markdown(f"**📈 Total Original:** {len(df)}")
 st.header("📊 Estatísticas")
 
 if not filtered_df.empty:
-    col1, col2, col3, col4 = st.columns(4)
+    try:
+        col1, col2, col3, col4 = st.columns(4)
 
-    with col1:
-        avg_yield = filtered_df["Yield_tons_per_hectare"].mean()
-        st.metric(
-            label="🌾 Produtividade Média", 
-            value=f"{avg_yield:.2f} ton/ha",
-            delta=f"{avg_yield - df['Yield_tons_per_hectare'].mean():.2f}"
-        )
+        # Verificar se as colunas necessárias existem antes de calcular métricas
+        if "Yield_tons_per_hectare" in filtered_df.columns:
+            with col1:
+                avg_yield = filtered_df["Yield_tons_per_hectare"].mean()
+                delta_yield = avg_yield - df["Yield_tons_per_hectare"].mean() if "Yield_tons_per_hectare" in df.columns else 0
+                st.metric(
+                    label="🌾 Produtividade Média", 
+                    value=f"{avg_yield:.2f} ton/ha",
+                    delta=f"{delta_yield:.2f}"
+                )
 
-    with col2:
-        avg_rainfall = filtered_df["Rainfall_mm"].mean()
-        st.metric(
-            label="🌧️ Chuva Média", 
-            value=f"{avg_rainfall:.2f} mm",
-            delta=f"{avg_rainfall - df['Rainfall_mm'].mean():.2f}"
-        )
+        if "Rainfall_mm" in filtered_df.columns:
+            with col2:
+                avg_rainfall = filtered_df["Rainfall_mm"].mean()
+                delta_rainfall = avg_rainfall - df["Rainfall_mm"].mean() if "Rainfall_mm" in df.columns else 0
+                st.metric(
+                    label="🌧️ Chuva Média", 
+                    value=f"{avg_rainfall:.2f} mm",
+                    delta=f"{delta_rainfall:.2f}"
+                )
 
-    with col3:
-        avg_temp = filtered_df["Temperature_Celsius"].mean()
-        st.metric(
-            label="🌡️ Temperatura Média", 
-            value=f"{avg_temp:.2f} °C",
-            delta=f"{avg_temp - df['Temperature_Celsius'].mean():.2f}"
-        )
+        if "Temperature_Celsius" in filtered_df.columns:
+            with col3:
+                avg_temp = filtered_df["Temperature_Celsius"].mean()
+                delta_temp = avg_temp - df["Temperature_Celsius"].mean() if "Temperature_Celsius" in df.columns else 0
+                st.metric(
+                    label="🌡️ Temperatura Média", 
+                    value=f"{avg_temp:.2f} °C",
+                    delta=f"{delta_temp:.2f}"
+                )
 
-    with col4:
-        corr_rainfall_yield = filtered_df["Rainfall_mm"].corr(filtered_df["Yield_tons_per_hectare"])
-        st.metric(
-            label="🔗 Correlação Chuva-Produtividade", 
-            value=f"{corr_rainfall_yield:.3f}" if not pd.isna(corr_rainfall_yield) else "N/A"
-        )
+        if "Rainfall_mm" in filtered_df.columns and "Yield_tons_per_hectare" in filtered_df.columns:
+            with col4:
+                corr_rainfall_yield = filtered_df["Rainfall_mm"].corr(filtered_df["Yield_tons_per_hectare"])
+                st.metric(
+                    label="🔗 Correlação Chuva-Produtividade", 
+                    value=f"{corr_rainfall_yield:.3f}" if not pd.isna(corr_rainfall_yield) else "N/A"
+                )
+
+    except Exception as e:
+        st.error(f"Erro ao calcular estatísticas: {str(e)}")
+        debug_info("Erro nas estatísticas:", traceback.format_exc())
 else:
     st.warning("⚠️ Nenhum dado encontrado com os filtros selecionados.")
 
@@ -202,127 +300,128 @@ else:
 st.header("📈 Visualizações")
 
 if not filtered_df.empty:
-    col1, col2 = st.columns(2)
+    try:
+        # Função para criar gráficos com tratamento de erro
+        def create_safe_chart(chart_func, title, error_msg):
+            try:
+                return chart_func()
+            except Exception as e:
+                st.error(f"Erro ao criar {title}: {str(e)}")
+                debug_info(f"Erro no gráfico {title}:", traceback.format_exc())
+                return None
 
-    with col1:
-        st.subheader("🌱 Produtividade por Cultura")
-        yield_by_crop = filtered_df.groupby("Crop")["Yield_tons_per_hectare"].mean().reset_index()
-        yield_by_crop = yield_by_crop.sort_values("Yield_tons_per_hectare", ascending=False)
+        col1, col2 = st.columns(2)
 
-        fig_crop = px.bar(
-            yield_by_crop, 
-            x="Crop", 
-            y="Yield_tons_per_hectare",
-            title="Produtividade Média por Cultura",
-            labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "Crop": "Cultura"},
-            color="Yield_tons_per_hectare",
-            color_continuous_scale="Greens"
-        )
-        fig_crop.update_layout(
-            showlegend=False,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white')
-        )
-        st.plotly_chart(fig_crop, use_container_width=True)
+        # Gráfico 1: Produtividade por Cultura
+        if "Crop" in filtered_df.columns and "Yield_tons_per_hectare" in filtered_df.columns:
+            with col1:
+                st.subheader("🌱 Produtividade por Cultura")
+                
+                def create_crop_chart():
+                    yield_by_crop = filtered_df.groupby("Crop")["Yield_tons_per_hectare"].mean().reset_index()
+                    yield_by_crop = yield_by_crop.sort_values("Yield_tons_per_hectare", ascending=False)
+                    
+                    fig = px.bar(
+                        yield_by_crop, 
+                        x="Crop", 
+                        y="Yield_tons_per_hectare",
+                        title="Produtividade Média por Cultura",
+                        labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "Crop": "Cultura"},
+                        color="Yield_tons_per_hectare",
+                        color_continuous_scale="Greens"
+                    )
+                    fig.update_layout(
+                        showlegend=False,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='white')
+                    )
+                    return fig
+                
+                fig = create_safe_chart(create_crop_chart, "Produtividade por Cultura", "gráfico de culturas")
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
 
-    with col2:
-        st.subheader("🗺️ Produtividade por Região")
-        yield_by_region = filtered_df.groupby("Region")["Yield_tons_per_hectare"].mean().reset_index()
-        yield_by_region = yield_by_region.sort_values("Yield_tons_per_hectare", ascending=False)
+        # Gráfico 2: Produtividade por Região
+        if "Region" in filtered_df.columns and "Yield_tons_per_hectare" in filtered_df.columns:
+            with col2:
+                st.subheader("🗺️ Produtividade por Região")
+                
+                def create_region_chart():
+                    yield_by_region = filtered_df.groupby("Region")["Yield_tons_per_hectare"].mean().reset_index()
+                    yield_by_region = yield_by_region.sort_values("Yield_tons_per_hectare", ascending=False)
+                    
+                    fig = px.bar(
+                        yield_by_region, 
+                        x="Region", 
+                        y="Yield_tons_per_hectare",
+                        title="Produtividade Média por Região",
+                        labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "Region": "Região"},
+                        color="Yield_tons_per_hectare",
+                        color_continuous_scale="Blues"
+                    )
+                    fig.update_layout(
+                        showlegend=False,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='white')
+                    )
+                    return fig
+                
+                fig = create_safe_chart(create_region_chart, "Produtividade por Região", "gráfico de regiões")
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
 
-        fig_region = px.bar(
-            yield_by_region, 
-            x="Region", 
-            y="Yield_tons_per_hectare",
-            title="Produtividade Média por Região",
-            labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "Region": "Região"},
-            color="Yield_tons_per_hectare",
-            color_continuous_scale="Blues"
-        )
-        fig_region.update_layout(
-            showlegend=False,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white')
-        )
-        st.plotly_chart(fig_region, use_container_width=True)
+        # Gráfico 3: Scatter plot se ambas as colunas existirem
+        if "Rainfall_mm" in filtered_df.columns and "Yield_tons_per_hectare" in filtered_df.columns:
+            st.subheader("🌧️ Chuva vs Produtividade")
+            
+            def create_scatter_chart():
+                fig = px.scatter(
+                    filtered_df, 
+                    x="Rainfall_mm", 
+                    y="Yield_tons_per_hectare",
+                    title="Correlação: Chuva vs Produtividade",
+                    labels={"Rainfall_mm": "Chuva (mm)", "Yield_tons_per_hectare": "Produtividade (ton/ha)"},
+                    color="Temperature_Celsius" if "Temperature_Celsius" in filtered_df.columns else None,
+                    color_continuous_scale="Viridis",
+                    hover_data=["Region", "Crop", "Soil_Type"] if all(col in filtered_df.columns for col in ["Region", "Crop", "Soil_Type"]) else None
+                )
+                
+                # Adicionar linha de tendência se possível
+                try:
+                    z = np.polyfit(filtered_df["Rainfall_mm"], filtered_df["Yield_tons_per_hectare"], 1)
+                    p = np.poly1d(z)
+                    fig.add_traces(go.Scatter(
+                        x=filtered_df["Rainfall_mm"], 
+                        y=p(filtered_df["Rainfall_mm"]),
+                        mode="lines",
+                        name="Linha de Tendência",
+                        line=dict(color="red", dash="dash")
+                    ))
+                except:
+                    pass  # Se não conseguir calcular a linha de tendência, continua sem ela
+                
+                fig.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='white')
+                )
+                return fig
+            
+            fig = create_safe_chart(create_scatter_chart, "Scatter Chuva vs Produtividade", "gráfico de correlação")
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
 
-    col3, col4 = st.columns(2)
+    except Exception as e:
+        st.error(f"Erro geral nas visualizações: {str(e)}")
+        debug_info("Erro geral:", traceback.format_exc())
 
-    with col3:
-        st.subheader("🏔️ Produtividade por Tipo de Solo")
-        yield_by_soil = filtered_df.groupby("Soil_Type")["Yield_tons_per_hectare"].mean().reset_index()
-        yield_by_soil = yield_by_soil.sort_values("Yield_tons_per_hectare", ascending=False)
-
-        fig_soil = px.bar(
-            yield_by_soil, 
-            x="Soil_Type", 
-            y="Yield_tons_per_hectare",
-            title="Produtividade Média por Tipo de Solo",
-            labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "Soil_Type": "Tipo de Solo"},
-            color="Yield_tons_per_hectare",
-            color_continuous_scale="Oranges"
-        )
-        fig_soil.update_layout(
-            showlegend=False,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white')
-        )
-        fig_soil.update_xaxes(tickangle=45)
-        st.plotly_chart(fig_soil, use_container_width=True)
-
-    with col4:
-        st.subheader("🌧️ Chuva vs Produtividade")
-        fig_scatter = px.scatter(
-            filtered_df, 
-            x="Rainfall_mm", 
-            y="Yield_tons_per_hectare",
-            title="Correlação: Chuva vs Produtividade",
-            labels={"Rainfall_mm": "Chuva (mm)", "Yield_tons_per_hectare": "Produtividade (ton/ha)"},
-            color="Temperature_Celsius",
-            color_continuous_scale="Viridis",
-            hover_data=["Region", "Crop", "Soil_Type"]
-        )
-
-        z = np.polyfit(filtered_df["Rainfall_mm"], filtered_df["Yield_tons_per_hectare"], 1)
-        p = np.poly1d(z)
-        fig_scatter.add_traces(go.Scatter(
-            x=filtered_df["Rainfall_mm"], 
-            y=p(filtered_df["Rainfall_mm"]),
-            mode="lines",
-            name="Linha de Tendência",
-            line=dict(color="red", dash="dash")
-        ))
-
-        fig_scatter.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white')
-        )
-        st.plotly_chart(fig_scatter, use_container_width=True)
-
-    st.subheader("📊 Distribuição de Produtividade")
-    fig_hist = px.histogram(
-        filtered_df, 
-        x="Yield_tons_per_hectare",
-        nbins=30,
-        title="Distribuição da Produtividade",
-        labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "count": "Frequência"},
-        color_discrete_sequence=["#4CAF50"]
-    )
-    fig_hist.update_layout(
-        showlegend=False,
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white')
-    )
-    st.plotly_chart(fig_hist, use_container_width=True)
-
-    with st.expander("📋 Ver Dados Filtrados"):
+# Seção de dados filtrados
+with st.expander("📋 Ver Dados Filtrados"):
+    try:
         st.dataframe(filtered_df, use_container_width=True)
-
+        
         csv = filtered_df.to_csv(index=False)
         st.download_button(
             label="💾 Baixar dados filtrados (CSV)",
@@ -330,606 +429,67 @@ if not filtered_df.empty:
             file_name="dados_agricolas_filtrados.csv",
             mime="text/csv"
         )
+    except Exception as e:
+        st.error(f"Erro ao exibir dados filtrados: {str(e)}")
+
+# Seção de Machine Learning (apenas se as colunas necessárias existirem)
+ml_required = ["Rainfall_mm", "Temperature_Celsius", "Soil_Type", "Crop", "Yield_tons_per_hectare"]
+ml_available = [col for col in ml_required if col in filtered_df.columns]
+
+if len(ml_available) >= 3:  # Pelo menos 3 colunas necessárias
+    st.markdown("---")
+    st.markdown('<div class="ml-section">', unsafe_allow_html=True)
+    st.markdown('<div class="comparison-header">🤖 Machine Learning: Análise Básica</div>', unsafe_allow_html=True)
+    
+    try:
+        # Sidebar para configurações ML
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### ⚙️ Configurações ML")
+        
+        # Verificar se temos dados suficientes
+        df_ml = filtered_df[ml_available].dropna().copy()
+        
+        if len(df_ml) < 10:
+            st.warning("⚠️ Dados insuficientes para análise de Machine Learning (mínimo 10 registros).")
+        else:
+            st.success(f"✅ Dados disponíveis para ML: {len(df_ml)} registros com {len(ml_available)} variáveis")
+            
+            # Mostrar quais colunas estão sendo usadas
+            st.info(f"📊 Variáveis disponíveis: {', '.join(ml_available)}")
+            
+            if "Yield_tons_per_hectare" in ml_available:
+                # Estatísticas básicas da variável alvo
+                col1, col2, col3 = st.columns(3)
+                col1.metric("📈 Produtividade Média", f"{df_ml['Yield_tons_per_hectare'].mean():.2f}")
+                col2.metric("📊 Desvio Padrão", f"{df_ml['Yield_tons_per_hectare'].std():.2f}")
+                col3.metric("📏 Amplitude", f"{df_ml['Yield_tons_per_hectare'].max() - df_ml['Yield_tons_per_hectare'].min():.2f}")
+    
+    except Exception as e:
+        st.error(f"Erro na seção de Machine Learning: {str(e)}")
+        debug_info("Erro ML:", traceback.format_exc())
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    st.info("ℹ️ Ajuste os filtros para ver as visualizações.")
-
-# Resultado da melhor colheita com base nos filtros
-st.header("🏆 Melhor Resultado de Produtividade")
-
-if not filtered_df.empty:
-    best_row = filtered_df.loc[filtered_df["Yield_tons_per_hectare"].idxmax()]
-
-    st.markdown(f"""
-    <div style="background-color: #f0f2f6; color: #333; padding: 1.5rem; border-radius: 10px; border-left: 6px solid #4CAF50; margin-top: 1rem; font-size: 1.05rem;">
-        <h3 style="color: #4CAF50;">🌟 A melhor colheita registrada com os filtros atuais foi:</h3>
-        <ul>
-            <li><strong>Região:</strong> {best_row['Region']}</li>
-            <li><strong>Cultura:</strong> {best_row['Crop']}</li>
-            <li><strong>Tipo de Solo:</strong> {best_row['Soil_Type']}</li>
-            <li><strong>Condição Climática:</strong> {best_row['Weather_Condition']}</li>
-            <li><strong>Uso de Fertilizante:</strong> {"Sim" if best_row["Fertilizer_Used"] else "Não"}</li>
-            <li><strong>Uso de Irrigação:</strong> {"Sim" if best_row["Irrigation_Used"] else "Não"}</li>
-            <li><strong>Chuva:</strong> {best_row["Rainfall_mm"]:.2f} mm</li>
-            <li><strong>Temperatura:</strong> {best_row["Temperature_Celsius"]:.2f} °C</li>
-            <li><strong>🌾 Produtividade:</strong> <strong>{best_row["Yield_tons_per_hectare"]:.2f} ton/ha</strong></li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-else:
-    st.info("ℹ️ Nenhuma colheita disponível com os filtros atuais.")
-    
-# Ranking das 3 melhores colheitas com base nos filtros
-st.header("🥇 Top 3 Colheitas com Maior Produtividade")
-
-if not filtered_df.empty:
-    top_3 = filtered_df.sort_values("Yield_tons_per_hectare", ascending=False).head(3).copy()
-    top_3["Fertilizer_Used"] = top_3["Fertilizer_Used"].map({True: "Sim", False: "Não"})
-    top_3["Irrigation_Used"] = top_3["Irrigation_Used"].map({True: "Sim", False: "Não"})
-
-    top_3_display = top_3[[
-        "Region", "Crop", "Soil_Type", "Weather_Condition",
-        "Fertilizer_Used", "Irrigation_Used",
-        "Rainfall_mm", "Temperature_Celsius", "Yield_tons_per_hectare"
-    ]].rename(columns={
-        "Region": "Região",
-        "Crop": "Cultura",
-        "Soil_Type": "Tipo de Solo",
-        "Weather_Condition": "Condição Climática",
-        "Fertilizer_Used": "Fertilizante",
-        "Irrigation_Used": "Irrigação",
-        "Rainfall_mm": "Chuva (mm)",
-        "Temperature_Celsius": "Temperatura (°C)",
-        "Yield_tons_per_hectare": "Produtividade (ton/ha)"
-    })
-
-    st.table(top_3_display.style.format({
-        "Chuva (mm)": "{:.2f}",
-        "Temperatura (°C)": "{:.2f}",
-        "Produtividade (ton/ha)": "{:.2f}"
-    }))
-else:
-    st.info("ℹ️ Nenhuma colheita disponível para exibir ranking com os filtros atuais.")
-
-st.markdown("---")
-
-# ----------------------------
-# 🤖 SEÇÃO DE MACHINE LEARNING MELHORADA COM LEGENDAS CORRIGIDAS
-# ----------------------------
-
-# Funções auxiliares para gráficos interativos com legendas corrigidas
-def get_plotly_style_corrected():
-    """Configura o estilo visual para gráficos Plotly com legendas corrigidas"""
-    return {
-        'plot_bgcolor': 'rgba(0,0,0,0)',
-        'paper_bgcolor': 'rgba(0,0,0,0)',
-        'font': {'family': 'Arial, sans-serif', 'size': 12, 'color': 'white'},
-        'xaxis': {
-            'showgrid': True,
-            'gridwidth': 1,
-            'gridcolor': '#E0E0E0',
-            'griddash': 'dash',
-            'showline': True,
-            'linewidth': 1,
-            'linecolor': '#CCCCCC',
-            'tickfont': {'color': 'white'},
-            'titlefont': {'color': 'white'}
-        },
-        'yaxis': {
-            'showgrid': True,
-            'gridwidth': 1,
-            'gridcolor': '#E0E0E0',
-            'griddash': 'dash',
-            'showline': True,
-            'linewidth': 1,
-            'linecolor': '#CCCCCC',
-            'tickfont': {'color': 'white'},
-            'titlefont': {'color': 'white'}
-        }
-    }
-
-def create_interactive_comparison_chart_corrected(metrics):
-    """Cria gráfico de comparação interativo com legendas corrigidas"""
-    colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343', '#FBE842', '#FF9A2E', '#A9AEB8']
-    
-    modelos = list(metrics.keys())
-    r2_scores = [metrics[modelo]['r2'] for modelo in modelos]
-    rmse_scores = [metrics[modelo]['rmse'] for modelo in modelos]
-    mae_scores = [metrics[modelo]['mae'] for modelo in modelos]
-    
-    fig = go.Figure()
-    
-    # Adicionar barras para cada métrica
-    fig.add_trace(go.Bar(
-        name='R² (Coeficiente de Determinação)',
-        x=modelos,
-        y=r2_scores,
-        marker_color=colors[0],
-        text=[f'{score:.3f}' for score in r2_scores],
-        textposition='auto',
-        textfont=dict(size=12, color='white'),
-        hovertemplate='<b>%{x}</b><br>' +
-                     'R²: %{y:.3f}<br>' +
-                     '<i>Explica %{customdata:.1f}% da variância</i>' +
-                     '<extra></extra>',
-        customdata=[score * 100 for score in r2_scores],
-        offsetgroup=1
-    ))
-    
-    fig.add_trace(go.Bar(
-        name='RMSE (Erro Quadrático Médio)',
-        x=modelos,
-        y=rmse_scores,
-        marker_color=colors[1],
-        text=[f'{score:.2f}' for score in rmse_scores],
-        textposition='auto',
-        textfont=dict(size=12, color='white'),
-        hovertemplate='<b>%{x}</b><br>' +
-                     'RMSE: %{y:.2f} ton/ha<br>' +
-                     '<i>Erro médio quadrático</i>' +
-                     '<extra></extra>',
-        offsetgroup=2
-    ))
-    
-    fig.add_trace(go.Bar(
-        name='MAE (Erro Absoluto Médio)',
-        x=modelos,
-        y=mae_scores,
-        marker_color=colors[2],
-        text=[f'{score:.2f}' for score in mae_scores],
-        textposition='auto',
-        textfont=dict(size=12, color='white'),
-        hovertemplate='<b>%{x}</b><br>' +
-                     'MAE: %{y:.2f} ton/ha<br>' +
-                     '<i>Erro médio absoluto</i>' +
-                     '<extra></extra>',
-        offsetgroup=3
-    ))
-    
-    # Adicionar anotações para melhor modelo
-    annotations = []
-    
-    melhor_r2_idx = np.argmax(r2_scores)
-    melhor_rmse_idx = np.argmin(rmse_scores)
-    
-    annotations.append(dict(
-        x=modelos[melhor_r2_idx],
-        y=r2_scores[melhor_r2_idx] + max(r2_scores) * 0.1,
-        text="🏆 Melhor R²",
-        showarrow=True,
-        arrowhead=2,
-        arrowcolor=colors[0],
-        font=dict(color='white', size=12)
-    ))
-    
-    annotations.append(dict(
-        x=modelos[melhor_rmse_idx],
-        y=rmse_scores[melhor_rmse_idx] + max(rmse_scores) * 0.1,
-        text="🎯 Menor RMSE",
-        showarrow=True,
-        arrowhead=2,
-        arrowcolor=colors[1],
-        font=dict(color='white', size=12)
-    ))
-    
-    fig.update_layout(
-        title={
-            'text': '🤖 Comparação Interativa: KNN vs Random Forest<br>' +
-                   '<sub>Análise de Desempenho para Predição de Produtividade Agrícola</sub>',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 20, 'color': 'white'}
-        },
-        xaxis_title='Modelos de Machine Learning',
-        yaxis_title='Valores das Métricas',
-        barmode='group',
-        legend=dict(
-            orientation="v",  # Vertical para evitar sobreposição
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=1.02,  # Posicionar à direita do gráfico
-            font=dict(size=11, color='white'),
-            bgcolor='rgba(0,0,0,0.3)',  # Fundo semi-transparente
-            bordercolor='white',
-            borderwidth=1
-        ),
-        height=600,
-        annotations=annotations,
-        margin=dict(r=200),  # Margem direita para acomodar legenda
-        **get_plotly_style_corrected()
-    )
-    
-    # Botões para filtrar métricas com estilo corrigido
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                type="buttons",
-                direction="left",
-                buttons=list([
-                    dict(
-                        args=[{"visible": [True, True, True]}],
-                        label="Todas as Métricas",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [True, False, False]}],
-                        label="Apenas R²",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [False, True, False]}],
-                        label="Apenas RMSE",
-                        method="restyle"
-                    ),
-                    dict(
-                        args=[{"visible": [False, False, True]}],
-                        label="Apenas MAE",
-                        method="restyle"
-                    ),
-                ]),
-                pad={"r": 10, "t": 10},
-                showactive=True,
-                x=0.01,
-                xanchor="left",
-                y=1.15,
-                yanchor="top",
-                bgcolor='rgba(255,255,255,0.1)',
-                bordercolor='white',
-                font=dict(color='white')
-            ),
-        ]
-    )
-    
-    return fig
-
-def create_dashboard_comparison_corrected(metrics, y_test):
-    """Cria dashboard completo com legendas corrigidas"""
-    colors = ['#4080FF', '#57A9FB', '#37D4CF', '#23C343']
-    
-    fig = make_subplots(
-        rows=2, cols=2,
-        subplot_titles=(
-            'Comparação de Métricas R²',
-            'Distribuição de Erros',
-            'Real vs Predito - KNN',
-            'Real vs Predito - Random Forest'
-        ),
-        specs=[[{"secondary_y": False}, {"secondary_y": False}],
-               [{"secondary_y": False}, {"secondary_y": False}]],
-        vertical_spacing=0.15,
-        horizontal_spacing=0.12
-    )
-    
-    # 1. Gráfico de barras de comparação R²
-    modelos = list(metrics.keys())
-    r2_scores = [metrics[modelo]['r2'] for modelo in modelos]
-    
-    fig.add_trace(
-        go.Bar(
-            name='R²', 
-            x=modelos, 
-            y=r2_scores, 
-            marker_color=colors[0],
-            text=[f'{score:.3f}' for score in r2_scores],
-            textposition='auto',
-            textfont=dict(color='white')
-        ),
-        row=1, col=1
-    )
-    
-    # 2. Distribuição de erros
-    erros_knn = np.abs(y_test - metrics['KNN']['y_pred'])
-    erros_rf = np.abs(y_test - metrics['Random Forest']['y_pred'])
-    
-    fig.add_trace(
-        go.Histogram(x=erros_knn, name='Erros KNN', marker_color=colors[0], opacity=0.7, nbinsx=20),
-        row=1, col=2
-    )
-    fig.add_trace(
-        go.Histogram(x=erros_rf, name='Erros RF', marker_color=colors[3], opacity=0.7, nbinsx=20),
-        row=1, col=2
-    )
-    
-    # 3. Scatter KNN
-    fig.add_trace(
-        go.Scatter(
-            x=y_test, y=metrics['KNN']['y_pred'],
-            mode='markers', name='KNN',
-            marker=dict(color=colors[0], size=4, opacity=0.6),
-            hovertemplate='<b>KNN</b><br>Real: %{x:.2f}<br>Predito: %{y:.2f}<extra></extra>'
-        ),
-        row=2, col=1
-    )
-    
-    # 4. Scatter Random Forest
-    fig.add_trace(
-        go.Scatter(
-            x=y_test, y=metrics['Random Forest']['y_pred'],
-            mode='markers', name='Random Forest',
-            marker=dict(color=colors[3], size=4, opacity=0.6),
-            hovertemplate='<b>Random Forest</b><br>Real: %{x:.2f}<br>Predito: %{y:.2f}<extra></extra>'
-        ),
-        row=2, col=2
-    )
-    
-    # Linhas ideais para os scatters
-    min_val = min(y_test.min(), metrics['KNN']['y_pred'].min(), metrics['Random Forest']['y_pred'].min())
-    max_val = max(y_test.max(), metrics['KNN']['y_pred'].max(), metrics['Random Forest']['y_pred'].max())
-    
-    for col in [1, 2]:
-        fig.add_trace(
-            go.Scatter(
-                x=[min_val, max_val], y=[min_val, max_val],
-                mode='lines', name='Ideal',
-                line=dict(dash='dash', color='red', width=2),
-                showlegend=(col == 1),
-                hovertemplate='Linha Ideal<extra></extra>'
-            ),
-            row=2, col=col
-        )
-    
-    fig.update_layout(
-        title={
-            'text': '📊 Dashboard Completo: Análise KNN vs Random Forest',
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'size': 18, 'color': 'white'}
-        },
-        height=800,
-        legend=dict(
-            orientation="v",
-            yanchor="top",
-            y=1,
-            xanchor="left",
-            x=1.02,
-            font=dict(size=10, color='white'),
-            bgcolor='rgba(0,0,0,0.3)',
-            bordercolor='white',
-            borderwidth=1
-        ),
-        margin=dict(r=150),
-        **get_plotly_style_corrected()
-    )
-    
-    # Atualizar eixos com cores brancas
-    fig.update_xaxes(title_text="Modelos", row=1, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    fig.update_yaxes(title_text="R² Score", row=1, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    fig.update_xaxes(title_text="Erro Absoluto", row=1, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    fig.update_yaxes(title_text="Frequência", row=1, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=1, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    fig.update_xaxes(title_text="Produtividade Real (ton/ha)", row=2, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    fig.update_yaxes(title_text="Produtividade Predita (ton/ha)", row=2, col=2, titlefont=dict(color='white'), tickfont=dict(color='white'))
-    
-    # Atualizar títulos dos subplots
-    fig.update_annotations(font=dict(color='white', size=12))
-    
-    return fig
-
-# SEÇÃO PRINCIPAL DE MACHINE LEARNING
-st.markdown('<div class="ml-section">', unsafe_allow_html=True)
-st.markdown('<div class="comparison-header">🤖 Machine Learning: Comparação Interativa KNN vs Random Forest</div>', unsafe_allow_html=True)
-
-# Sidebar para configurações ML
-st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚙️ Configurações ML")
-knn_neighbors = st.sidebar.slider("KNN - Número de Vizinhos", 3, 15, 5, 1)
-rf_estimators = st.sidebar.slider("Random Forest - Número de Árvores", 50, 200, 100, 25)
-test_size = st.sidebar.slider("Tamanho do Conjunto de Teste (%)", 10, 40, 20, 5) / 100
-
-# Verifica se as colunas necessárias estão presentes
-knn_required = ["Rainfall_mm", "Temperature_Celsius", "Soil_Type", "Crop", "Yield_tons_per_hectare"]
-missing_knn_cols = [col for col in knn_required if col not in filtered_df.columns]
-
-if missing_knn_cols:
-    st.warning(f"Colunas faltando para análise de Machine Learning: {', '.join(missing_knn_cols)}")
-else:
-    df_ml = filtered_df[knn_required].dropna().copy()
-
-    if df_ml.empty:
-        st.warning("⚠️ Dados insuficientes para treinamento do modelo.")
-    else:
-        # Imports necessários
-        from sklearn.model_selection import train_test_split
-        from sklearn.neighbors import KNeighborsRegressor
-        from sklearn.ensemble import RandomForestRegressor
-        from sklearn.preprocessing import LabelEncoder, StandardScaler
-        from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-
-        # Encoding de variáveis categóricas
-        label_encoder_soil = LabelEncoder()
-        label_encoder_crop = LabelEncoder()
-        df_ml["Soil_Type"] = label_encoder_soil.fit_transform(df_ml["Soil_Type"])
-        df_ml["Crop"] = label_encoder_crop.fit_transform(df_ml["Crop"])
-
-        # Variáveis independentes e alvo
-        X = df_ml.drop("Yield_tons_per_hectare", axis=1)
-        y = df_ml["Yield_tons_per_hectare"]
-
-        # Treino/teste
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-
-        # Normalizar dados para KNN
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-
-        # Treinamento dos modelos
-        with st.spinner("🔄 Treinando modelos KNN e Random Forest..."):
-            # KNN
-            knn = KNeighborsRegressor(n_neighbors=knn_neighbors)
-            knn.fit(X_train_scaled, y_train)
-            y_pred_knn = knn.predict(X_test_scaled)
-
-            # Random Forest
-            rf = RandomForestRegressor(n_estimators=rf_estimators, random_state=42)
-            rf.fit(X_train, y_train)
-            y_pred_rf = rf.predict(X_test)
-
-        # Cálculo das métricas
-        metrics = {
-            'KNN': {
-                'r2': r2_score(y_test, y_pred_knn),
-                'rmse': np.sqrt(mean_squared_error(y_test, y_pred_knn)),
-                'mae': mean_absolute_error(y_test, y_pred_knn),
-                'y_pred': y_pred_knn
-            },
-            'Random Forest': {
-                'r2': r2_score(y_test, y_pred_rf),
-                'rmse': np.sqrt(mean_squared_error(y_test, y_pred_rf)),
-                'mae': mean_absolute_error(y_test, y_pred_rf),
-                'y_pred': y_pred_rf
-            }
-        }
-
-        # Exibição das métricas em cards melhorados
-        st.subheader("📊 Resultados dos Modelos")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("#### 🔍 K-Nearest Neighbors (KNN)")
-            knn_col1, knn_col2, knn_col3 = st.columns(3)
-            knn_col1.metric("📈 R²", f"{metrics['KNN']['r2']:.3f}")
-            knn_col2.metric("📉 RMSE", f"{metrics['KNN']['rmse']:.2f} ton/ha")
-            knn_col3.metric("📏 MAE", f"{metrics['KNN']['mae']:.2f} ton/ha")
-        
-        with col2:
-            st.markdown("#### 🌲 Random Forest")
-            rf_col1, rf_col2, rf_col3 = st.columns(3)
-            rf_col1.metric("📈 R²", f"{metrics['Random Forest']['r2']:.3f}")
-            rf_col2.metric("📉 RMSE", f"{metrics['Random Forest']['rmse']:.2f} ton/ha")
-            rf_col3.metric("📏 MAE", f"{metrics['Random Forest']['mae']:.2f} ton/ha")
-
-        # Análise comparativa
-        st.subheader("🏆 Análise Comparativa")
-        melhor_r2 = max(metrics, key=lambda x: metrics[x]['r2'])
-        melhor_rmse = min(metrics, key=lambda x: metrics[x]['rmse'])
-        melhor_mae = min(metrics, key=lambda x: metrics[x]['mae'])
-        
-        col1, col2, col3 = st.columns(3)
-        col1.success(f"🏆 Melhor R²: **{melhor_r2}** ({metrics[melhor_r2]['r2']:.3f})")
-        col2.success(f"🎯 Menor RMSE: **{melhor_rmse}** ({metrics[melhor_rmse]['rmse']:.2f})")
-        col3.success(f"📏 Menor MAE: **{melhor_mae}** ({metrics[melhor_mae]['mae']:.2f})")
-
-        # GRÁFICO PRINCIPAL INTERATIVO COM LEGENDAS CORRIGIDAS
-        st.subheader("🎨 Gráfico de Comparação Interativo")
-        fig_comparison = create_interactive_comparison_chart_corrected(metrics)
-        st.plotly_chart(fig_comparison, use_container_width=True)
-
-        # DASHBOARD COMPLETO COM LEGENDAS CORRIGIDAS
-        st.subheader("📋 Dashboard Completo de Análise")
-        fig_dashboard = create_dashboard_comparison_corrected(metrics, y_test)
-        st.plotly_chart(fig_dashboard, use_container_width=True)
-
-        # Gráficos individuais melhorados
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("🔍 KNN: Real vs Predito")
-            comparison_knn_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred_knn})
-            fig_knn = px.scatter(
-                comparison_knn_df,
-                x="Real",
-                y="Previsto",
-                title="KNN: Produtividade Real vs Predita",
-                labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Predita (ton/ha)"},
-                color_discrete_sequence=["#4080FF"]
-            )
-            fig_knn.add_trace(
-                go.Scatter(
-                    x=[y_test.min(), y_test.max()],
-                    y=[y_test.min(), y_test.max()],
-                    mode='lines',
-                    name='Ideal',
-                    line=dict(dash='dash', color='red')
-                )
-            )
-            fig_knn.update_layout(**get_plotly_style_corrected())
-            st.plotly_chart(fig_knn, use_container_width=True)
-
-        with col2:
-            st.subheader("🌲 Random Forest: Real vs Predito")
-            comparison_rf_df = pd.DataFrame({"Real": y_test, "Previsto": y_pred_rf})
-            fig_rf = px.scatter(
-                comparison_rf_df,
-                x="Real",
-                y="Previsto",
-                title="Random Forest: Produtividade Real vs Predita",
-                labels={"Real": "Produtividade Real (ton/ha)", "Previsto": "Produtividade Predita (ton/ha)"},
-                color_discrete_sequence=["#23C343"]
-            )
-            fig_rf.add_trace(
-                go.Scatter(
-                    x=[y_test.min(), y_test.max()],
-                    y=[y_test.min(), y_test.max()],
-                    mode='lines',
-                    name='Ideal',
-                    line=dict(dash='dash', color='red')
-                )
-            )
-            fig_rf.update_layout(**get_plotly_style_corrected())
-            st.plotly_chart(fig_rf, use_container_width=True)
-
-        # Interpretação dos resultados
-        with st.expander("💡 Interpretação dos Resultados"):
-            st.markdown("""
-            **Explicação das Métricas:**
-            - **R² (Coeficiente de Determinação)**: Indica a proporção da variância explicada pelo modelo (0-1, quanto maior melhor)
-            - **RMSE (Erro Quadrático Médio)**: Penaliza mais os erros grandes (quanto menor melhor)
-            - **MAE (Erro Absoluto Médio)**: Média dos erros absolutos (quanto menor melhor)
-            
-            **Como Interpretar os Gráficos:**
-            - **Gráfico de Comparação**: Permite filtrar métricas específicas usando os botões
-            - **Real vs Predito**: Pontos próximos à linha vermelha indicam predições mais precisas
-            - **Dashboard Completo**: Visão abrangente com múltiplas perspectivas dos resultados
-            """)
-
-        # Download dos resultados
-        with st.expander("💾 Download dos Resultados"):
-            # Criar DataFrame com resultados
-            results_df = pd.DataFrame({
-                'Modelo': list(metrics.keys()),
-                'R²': [metrics[modelo]['r2'] for modelo in metrics.keys()],
-                'RMSE': [metrics[modelo]['rmse'] for modelo in metrics.keys()],
-                'MAE': [metrics[modelo]['mae'] for modelo in metrics.keys()]
-            })
-            
-            st.dataframe(results_df, use_container_width=True)
-            
-            # Download CSV
-            csv_results = results_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Baixar Métricas (CSV)",
-                data=csv_results,
-                file_name="metricas_ml_comparacao.csv",
-                mime="text/csv"
-            )
-            
-            # Download predições
-            predictions_df = pd.DataFrame({
-                'Real': y_test,
-                'KNN_Predito': y_pred_knn,
-                'RF_Predito': y_pred_rf
-            })
-            csv_predictions = predictions_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Baixar Predições (CSV)",
-                data=csv_predictions,
-                file_name="predicoes_ml_comparacao.csv",
-                mime="text/csv"
-            )
-
-st.markdown('</div>', unsafe_allow_html=True)
+    st.info(f"ℹ️ Seção de Machine Learning não disponível. Colunas necessárias: {', '.join(ml_required)}. Disponíveis: {', '.join(ml_available)}")
 
 # Footer
 st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666;'>
-        <p>🌾 Dashboard de Análise Agrícola | Desenvolvido por Sérgio | Melhorado com Gráficos Interativos</p>
+        <p>🌾 Dashboard de Análise Agrícola | Versão Robusta com Tratamento de Erros</p>
     </div>
     """, 
     unsafe_allow_html=True
 )
+
+# Informações de debug no final (se habilitado)
+if st.sidebar.checkbox("🐛 Modo Debug", value=False):
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🔍 Informações de Debug")
+    st.sidebar.write(f"**Python:** {sys.version}")
+    st.sidebar.write(f"**Streamlit:** {st.__version__}")
+    st.sidebar.write(f"**Pandas:** {pd.__version__}")
+    st.sidebar.write(f"**Plotly:** {px.__version__}")
+    st.sidebar.write(f"**NumPy:** {np.__version__}")
