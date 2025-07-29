@@ -479,10 +479,14 @@ fig_rf.add_trace(
 )
 st.plotly_chart(fig_rf, use_container_width=True)
 
-# Comparação KNN vs RF - gráfico de barras
-st.subheader("📊 Comparação entre Modelos: KNN vs Random Forest")
+# Comparação KNN vs RF - gráfico de barras com visual aprimorado
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
+
+st.subheader("📊 Comparativo de Desempenho: KNN vs Random Forest")
+
+sns.set(style="whitegrid")
 
 modelos = ['KNN', 'Random Forest']
 r2_scores = [r2, r2_rf]
@@ -492,16 +496,30 @@ mae_scores = [mae, mae_rf]
 x = np.arange(len(modelos))
 width = 0.25
 
-fig_comp, ax = plt.subplots(figsize=(8, 5))
-ax.bar(x - width, r2_scores, width, label='R²', color='green')
-ax.bar(x, rmse_scores, width, label='RMSE', color='orange')
-ax.bar(x + width, mae_scores, width, label='MAE', color='blue')
+fig, ax = plt.subplots(figsize=(10, 6))
+
+bars_r2 = ax.bar(x - width, r2_scores, width, label='R²', color='#4CAF50')
+bars_rmse = ax.bar(x, rmse_scores, width, label='RMSE', color='#FF9800')
+bars_mae = ax.bar(x + width, mae_scores, width, label='MAE', color='#2196F3')
+
+def autolabel(bars):
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 5), textcoords="offset points",
+                    ha='center', va='bottom', fontsize=9)
+
+autolabel(bars_r2)
+autolabel(bars_rmse)
+autolabel(bars_mae)
 
 ax.set_xticks(x)
-ax.set_xticklabels(modelos)
-ax.set_title("Desempenho dos Modelos")
+ax.set_xticklabels(modelos, fontsize=12)
+ax.set_ylabel("Valor", fontsize=12)
+ax.set_title("📊 Comparativo de Desempenho: KNN vs Random Forest", fontsize=14, fontweight='bold')
 ax.legend()
-st.pyplot(fig_comp)
+
+st.pyplot(fig)
 
 st.markdown(
     """
