@@ -440,7 +440,8 @@ else:
             )
         )
         st.plotly_chart(fig_pred, use_container_width=True)
-        # Treinamento com Random Forest
+        
+# Treinamento com Random Forest
 from sklearn.ensemble import RandomForestRegressor
 
 rf = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -479,6 +480,10 @@ fig_rf.add_trace(
 )
 st.plotly_chart(fig_rf, use_container_width=True)
 
+# ----------------------------
+# 🤖 Machine Learning: Comparação KNN vs RF
+# ----------------------------
+
 # Comparação KNN vs RF - gráfico de barras com visual aprimorado
 import matplotlib.pyplot as plt
 import numpy as np
@@ -496,7 +501,9 @@ mae_scores = [mae, mae_rf]
 x = np.arange(len(modelos))
 width = 0.25
 
+plt.style.use('dark_background')  # Aplica fundo escuro
 fig, ax = plt.subplots(figsize=(10, 6))
+
 
 bars_r2 = ax.bar(x - width, r2_scores, width, label='R²', color='#4CAF50')
 bars_rmse = ax.bar(x, rmse_scores, width, label='RMSE', color='#FF9800')
