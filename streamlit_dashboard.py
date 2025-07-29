@@ -503,7 +503,7 @@ y = np.arange(len(metricas))
 height = 0.35
 
 # Figura menor e sem fundo
-fig, ax = plt.subplots(figsize=(8, 4.5), facecolor='none')
+fig, ax = plt.subplots(figsize=(6, 4), facecolor='none')
 fig.patch.set_alpha(0)
 ax.set_facecolor('none')
 
@@ -518,7 +518,7 @@ def autolabel(bars):
         ax.annotate(f'{width:.2f}',
                     xy=(width, bar.get_y() + bar.get_height() / 2),
                     xytext=(5, 0), textcoords="offset points",
-                    ha='left', va='center', fontsize=10, color='white')
+                    ha='left', va='center', fontsize=8, color='white')
 
 autolabel(bars_knn)
 autolabel(bars_rf)
