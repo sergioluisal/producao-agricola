@@ -544,44 +544,44 @@ fig.add_annotation(
 )
 
 # Botões para alternar visibilidade das métricas
-fig.update_layout(
-    updatemenus=[
-        dict(
-            type="buttons",
-            direction="left",
-            buttons=[
-                dict(
-                    args=[{"visible": [True, True, True]}],
-                    label="Todas as Métricas",
-                    method="restyle"
-                ),
-                dict(
-                    args=[{"visible": [True, False, False]}],
-                    label="Apenas R²",
-                    method="restyle"
-                ),
-                dict(
-                    args=[{"visible": [False, True, False]}],
-                    label="Apenas RMSE",
-                    method="restyle"
-                ),
-                dict(
-                    args=[{"visible": [False, False, True]}],
-                    label="Apenas MAE",
-                    method="restyle"
-                ),
-            ],
-            pad={"r": 10, "t": 10},
-            showactive=True,
-            x=0.01,
-            xanchor="left",
-            y=0.93,  # antes era 1.08 — agora deslocado para não colidir com título
-            yanchor="top"
-        ),
-    ]
-)
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="left",
+                buttons=[
+                    dict(
+                        args=[{"visible": [True, True, True]}],
+                        label="Todas as Métricas",
+                        method="restyle"
+                    ),
+                    dict(
+                        args=[{"visible": [True, False, False]}],
+                        label="Apenas R²",
+                        method="restyle"
+                    ),
+                    dict(
+                        args=[{"visible": [False, True, False]}],
+                        label="Apenas RMSE",
+                        method="restyle"
+                    ),
+                    dict(
+                        args=[{"visible": [False, False, True]}],
+                        label="Apenas MAE",
+                        method="restyle"
+                    ),
+                ],
+                pad={"r": 10, "t": 10},
+                showactive=True,
+                x=0.01,
+                xanchor="left",
+                y=1.08,
+                yanchor="top"
+            ),
+        ]
+    )
 
-return fig
+    return fig
 
 def create_dashboard_comparison_transparent(metrics, y_test):
     """Cria dashboard completo com múltiplos gráficos com fundo transparente"""
