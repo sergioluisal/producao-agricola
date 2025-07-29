@@ -304,6 +304,9 @@ if not filtered_df.empty:
         filtered_df, 
         x="Yield_tons_per_hectare",
         nbins=30,
+        kde=True,
+        linewidth=0.3,
+        alpha=0.8,
         title="Distribuição da Produtividade",
         labels={"Yield_tons_per_hectare": "Produtividade (ton/ha)", "count": "Frequência"},
         color_discrete_sequence=["#4CAF50"]
@@ -912,7 +915,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666;'>
-        <p>🌾 Dashboard de Análise Agrícola | Desenvolvido por Sérgio | Melhorado com Gráficos Interativos</p>
+        <p>🌾 Dashboard de Análise Agrícola | Desenvolvido por Sérgio</p>
     </div>
     """, 
     unsafe_allow_html=True
