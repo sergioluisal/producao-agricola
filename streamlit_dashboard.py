@@ -300,7 +300,7 @@ if not filtered_df.empty:
         st.plotly_chart(fig_scatter, use_container_width=True)
         
     st.subheader("📊 Distribuição de Produtividade")
-       fig_hist = px.histogram(
+    fig_hist = px.histogram(
         filtered_df, 
         x="Yield_tons_per_hectare",
         nbins=30,
