@@ -575,7 +575,7 @@ def create_interactive_comparison_chart_transparent(metrics):
                 showactive=True,
                 x=0.01,
                 xanchor="left",
-                y=0.90,
+                y=0.92,
                 yanchor="top"
             ),
         ]
